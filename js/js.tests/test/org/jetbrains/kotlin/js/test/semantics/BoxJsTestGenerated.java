@@ -6060,12 +6060,6 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("js/js.translator/testData/box/multiModule"), Pattern.compile("^([^_](.+))\\.kt$"), TargetBackend.JS, true);
         }
 
-        @TestMetadata("constantPropagation.kt")
-        public void testConstantPropagation() throws Exception {
-            String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/multiModule/constantPropagation.kt");
-            doTest(fileName);
-        }
-
         @TestMetadata("interfaceMethodWithDefaultParameter.kt")
         public void testInterfaceMethodWithDefaultParameter() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/multiModule/interfaceMethodWithDefaultParameter.kt");
@@ -6834,6 +6828,12 @@ public class BoxJsTestGenerated extends AbstractBoxJsTest {
         @TestMetadata("byteAndShortConversions.kt")
         public void testByteAndShortConversions() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/number/byteAndShortConversions.kt");
+            doTest(fileName);
+        }
+
+        @TestMetadata("constantPropagation.kt")
+        public void testConstantPropagation() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("js/js.translator/testData/box/number/constantPropagation.kt");
             doTest(fileName);
         }
 
