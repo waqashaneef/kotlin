@@ -102,16 +102,8 @@ public final class Translation {
 
                     if (KotlinBuiltIns.isLong(type)) {
 
-                        KtReferenceExpression referenceExpression;
-                        if (expression instanceof KtReferenceExpression) {
-                            referenceExpression = (KtReferenceExpression) expression;
-                        }
-                        else if (expression instanceof KtQualifiedExpression) {
-                            referenceExpression = PsiUtils.getNotNullSimpleNameSelector((KtQualifiedExpression) expression);
-                        }
-                        else {
-                            return constantResult;
-                        }
+                        KtReferenceExpression referenceExpression = PsiUtils.getSimpleName(expression);
+                        if (referenceExpression == null) return constantResult;
 
                         DeclarationDescriptor descriptor =
                                 BindingUtils.getDescriptorForReferenceExpression(context.bindingContext(), referenceExpression);
