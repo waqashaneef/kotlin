@@ -273,6 +273,12 @@ public class JvmOptimizeImportsTestGenerated extends AbstractJvmOptimizeImportsT
             doTest(fileName);
         }
 
+        @TestMetadata("deprecatedClassifierFromCompanionObject.kt")
+        public void testDeprecatedClassifierFromCompanionObject() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/editor/optimizeImports/common/deprecatedClassifierFromCompanionObject.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("Enums.kt")
         public void testEnums() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/editor/optimizeImports/common/Enums.kt");

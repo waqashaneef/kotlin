@@ -1200,6 +1200,12 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
             doTest(fileName);
         }
 
+        @TestMetadata("classifierFromCompanionObjectDeprecationEnabled.kt")
+        public void testClassifierFromCompanionObjectDeprecationEnabled() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/autoImports/classifierFromCompanionObjectDeprecationEnabled.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("enumEntries.kt")
         public void testEnumEntries() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/autoImports/enumEntries.kt");
@@ -2251,6 +2257,12 @@ public class QuickFixTestGenerated extends AbstractQuickFixTest {
                 @TestMetadata("classWithQualifier.kt")
                 public void testClassWithQualifier() throws Exception {
                     String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createClass/importDirective/classWithQualifier.kt");
+                    doTest(fileName);
+                }
+
+                @TestMetadata("deprecatedClassifier.kt")
+                public void testDeprecatedClassifier() throws Exception {
+                    String fileName = KotlinTestUtils.navigationMetadata("idea/testData/quickfix/createFromUsage/createClass/importDirective/deprecatedClassifier.kt");
                     doTest(fileName);
                 }
 

@@ -33,8 +33,7 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.resolve.scopes.ImportingScope
 import org.jetbrains.kotlin.resolve.scopes.LexicalScope
 import org.jetbrains.kotlin.resolve.scopes.receivers.*
-import org.jetbrains.kotlin.resolve.scopes.utils.findClassifier
-import org.jetbrains.kotlin.resolve.scopes.utils.memberScopeAsImportingScope
+import org.jetbrains.kotlin.resolve.scopes.utils.*
 import org.jetbrains.kotlin.resolve.source.KotlinSourceElement
 import org.jetbrains.kotlin.types.expressions.ExpressionTypingContext
 import org.jetbrains.kotlin.types.expressions.isWithoutValueArguments
@@ -71,7 +70,18 @@ class QualifiedExpressionResolver {
         val ownerDescriptor = if (!isDebuggerContext) scope.ownerDescriptor else null
         if (userType.qualifier == null) {
             val descriptor = userType.referenceExpression?.let { expression ->
-                val classifier = scope.findClassifier(expression.getReferencedNameAsName(), KotlinLookupLocation(expression))
+                val (classifier, isDeprecated) = scope.findFirstClassifierWithDeprecationStatus(expression.getReferencedNameAsName(), KotlinLookupLocation(expression))
+
+                if (classifier != null && isDeprecated) {
+                    trace.record(BindingContext.DEPRECATED_SHORT_NAME_ACCESS, expression) // For IDE
+
+                    // slow-path: we know that closest classifier is imported by the deprecated path, but before reporting
+                    // deprecation, we have to recheck if there's some other import path, which isn't deprecated (e.g. explicit import)
+                    if (scope.allImportPathsAreDeprecated(classifier, KotlinLookupLocation(expression))) {
+                        trace.report(Errors.DEPRECATED_ACCESS_BY_SHORT_NAME.on(expression, classifier))
+                    }
+                }
+
                 checkNotEnumEntry(classifier, trace, expression)
                 storeResult(trace, expression, classifier, ownerDescriptor, position = QualifierPosition.TYPE, isQualifier = false)
                 classifier
