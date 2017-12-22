@@ -23,6 +23,7 @@ import com.intellij.openapi.compiler.CompilerManager
 import org.jetbrains.kotlin.idea.KotlinBundle
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.idea.scratch.ScratchFileLanguageProvider
+import org.jetbrains.kotlin.idea.scratch.output.ProgressBarOutputHandler
 import org.jetbrains.kotlin.idea.scratch.getScratchPanelFromSelectedEditor
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandlerAdapter
 import org.jetbrains.kotlin.idea.scratch.ui.scratchTopPanel
@@ -62,13 +63,19 @@ class RunScratchAction : AnAction(
 
             e.presentation.isEnabled = false
 
+            if (isRepl) {
+                executor.addOutputHandler(ProgressBarOutputHandler)
+            }
+
             executor.addOutputHandler(handler)
 
-            executor.addOutputHandler(object : ScratchOutputHandlerAdapter() {
-                override fun onFinish(file: ScratchFile) {
-                    e.presentation.isEnabled = true
+            executor.addOutputHandler(
+                object : ScratchOutputHandlerAdapter() {
+                    override fun onFinish(file: ScratchFile) {
+                        e.presentation.isEnabled = true
+                    }
                 }
-            })
+            )
 
             executor.execute()
         }

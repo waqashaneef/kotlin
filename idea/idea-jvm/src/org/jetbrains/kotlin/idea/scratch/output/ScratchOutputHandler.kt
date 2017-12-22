@@ -35,7 +35,7 @@ enum class ScratchOutputType {
     ERROR
 }
 
-open class ScratchOutputHandlerAdapter: ScratchOutputHandler {
+open class ScratchOutputHandlerAdapter : ScratchOutputHandler {
     override fun onStart(file: ScratchFile) {}
     override fun handle(file: ScratchFile, expression: ScratchExpression, output: ScratchOutput) {}
     override fun error(file: ScratchFile, message: String) {}

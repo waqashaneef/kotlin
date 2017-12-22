@@ -66,9 +66,9 @@ class ScratchToolWindowFactory : ToolWindowFactory {
 }
 
 fun showToolWindow(
-        project: Project,
-        message: String,
-        type: ConsoleViewContentType
+    project: Project,
+    message: String,
+    type: ConsoleViewContentType
 ) {
     if (ApplicationManager.getApplication().isUnitTestMode) return
 

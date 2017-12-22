@@ -46,6 +46,8 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
         }
     }
 
+    val progressBar: JProgressBar
+
     private val moduleChooser: ModulesComboBox
     private val isReplCheckbox: JCheckBox
     private val isMakeBeforeRunCheckbox: JCheckBox
@@ -66,6 +68,10 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
         moduleChooser = createModuleChooser(scratchFile.psiFile.project)
         add(JLabel("Use classpath of module"))
         add(moduleChooser)
+
+        progressBar = JProgressBar()
+        progressBar.isVisible = false
+        add(progressBar)
     }
 
     fun getModule(): Module? = moduleChooser.selectedModule
