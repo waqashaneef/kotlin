@@ -1,0 +1,2 @@
+error: experimental API marker org.test.Experimental2 has binary scope, therefore it can't be used with -Xuse-experimental
+COMPILATION_ERROR

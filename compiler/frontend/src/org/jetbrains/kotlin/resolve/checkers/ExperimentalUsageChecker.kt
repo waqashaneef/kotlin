@@ -18,10 +18,13 @@ package org.jetbrains.kotlin.resolve.checkers
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.config.AnalysisFlag
+import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.KotlinTarget
 import org.jetbrains.kotlin.diagnostics.Errors
+import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -40,7 +43,7 @@ import org.jetbrains.kotlin.utils.SmartSet
 import org.jetbrains.kotlin.utils.addIfNotNull
 
 object ExperimentalUsageChecker : CallChecker {
-    private val EXPERIMENTAL_FQ_NAME = FqName("kotlin.Experimental")
+    val EXPERIMENTAL_FQ_NAME = FqName("kotlin.Experimental")
     private val USE_EXPERIMENTAL_FQ_NAME = FqName("kotlin.UseExperimental")
     private val USE_EXPERIMENTAL_ANNOTATION_CLASS = Name.identifier("annotationClass")
 
@@ -211,6 +214,34 @@ object ExperimentalUsageChecker : CallChecker {
         val annotationClasses = allValueArguments[USE_EXPERIMENTAL_ANNOTATION_CLASS]
         return annotationClasses is ArrayValue && annotationClasses.value.any { annotationClass ->
             (annotationClass as? KClassValue)?.value?.constructor?.declarationDescriptor?.fqNameSafe == annotationFqName
+        }
+    }
+
+    fun checkCompilerArguments(module: ModuleDescriptor, languageVersionSettings: LanguageVersionSettings, reportError: (String) -> Unit) {
+        fun checkAnnotation(fqName: String, allowBinaryScope: Boolean): Boolean {
+            val descriptor = module.resolveClassByFqName(FqName(fqName), NoLookupLocation.FOR_NON_TRACKED_SCOPE)
+            val experimentality = descriptor?.loadExperimentalityForMarkerAnnotation()
+            val message = when {
+                descriptor == null ->
+                    "Experimental API marker $fqName is unresolved. " +
+                    "Please make sure it's present in the module dependencies"
+                experimentality == null ->
+                    "Class $fqName is not an experimental API marker annotation"
+                !allowBinaryScope && experimentality.scope == Experimentality.Scope.BINARY ->
+                    "Experimental API marker $fqName has binary scope, therefore it can't be used with -Xuse-experimental"
+                else -> return true
+            }
+            reportError(message)
+            return false
+        }
+
+        val validExperimental =
+            languageVersionSettings.getFlag(AnalysisFlag.experimental).filter { checkAnnotation(it, allowBinaryScope = true) }
+        val validUseExperimental =
+            languageVersionSettings.getFlag(AnalysisFlag.useExperimental).filter { checkAnnotation(it, allowBinaryScope = false) }
+
+        for (fqName in validExperimental.intersect(validUseExperimental)) {
+            reportError("'-Xuse-experimental=$fqName' has no effect because '-Xexperimental=$fqName' is used")
         }
     }
 

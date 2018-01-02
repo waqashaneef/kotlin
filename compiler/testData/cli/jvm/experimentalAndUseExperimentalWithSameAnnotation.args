@@ -1,0 +1,5 @@
+$TESTDATA_DIR$/experimentalAndUseExperimentalWithSameAnnotation.kt
+-d
+$TEMP_DIR$
+-Xexperimental=org.test.ExperimentalAPI
+-Xuse-experimental=org.test.ExperimentalAPI

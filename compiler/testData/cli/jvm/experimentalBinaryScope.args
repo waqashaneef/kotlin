@@ -1,0 +1,5 @@
+$TESTDATA_DIR$/experimentalBinaryScope.kt
+-d
+$TEMP_DIR$
+-Xexperimental=org.test.Experimental1
+-Xuse-experimental=org.test.Experimental2
