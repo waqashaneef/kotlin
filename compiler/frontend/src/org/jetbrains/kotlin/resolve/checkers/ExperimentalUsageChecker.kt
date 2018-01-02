@@ -18,13 +18,11 @@ package org.jetbrains.kotlin.resolve.checkers
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.ClassifierDescriptor
-import org.jetbrains.kotlin.descriptors.ConstructorDescriptor
-import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
+import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.KotlinTarget
 import org.jetbrains.kotlin.diagnostics.Errors
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
@@ -37,6 +35,7 @@ import org.jetbrains.kotlin.resolve.constants.EnumValue
 import org.jetbrains.kotlin.resolve.constants.KClassValue
 import org.jetbrains.kotlin.resolve.descriptorUtil.annotationClass
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
+import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.utils.SmartSet
 import org.jetbrains.kotlin.utils.addIfNotNull
 
@@ -65,15 +64,23 @@ object ExperimentalUsageChecker : CallChecker {
 
     override fun check(resolvedCall: ResolvedCall<*>, reportOn: PsiElement, context: CallCheckerContext) {
         // TODO: ensure reportOn is never a synthetic element
-        checkExperimental(resolvedCall.resultingDescriptor, reportOn, context.trace)
+        checkExperimental(resolvedCall.resultingDescriptor, reportOn, context.trace, context.moduleDescriptor)
     }
 
-    private fun checkExperimental(descriptor: DeclarationDescriptor, element: PsiElement, trace: BindingTrace) {
-        for ((annotationFqName, severity, scope) in descriptor.loadExperimentalities()) {
+    private fun checkExperimental(descriptor: DeclarationDescriptor, element: PsiElement, trace: BindingTrace, module: ModuleDescriptor) {
+        val experimentalities = descriptor.loadExperimentalities()
+        if (experimentalities.isEmpty()) return
+
+        val isBodyUsage: Boolean by lazy(LazyThreadSafetyMode.NONE) { element.isBodyUsage() }
+        val isBodyUsageInSameModule =
+            descriptor.module == module && element.isBodyUsage(allowInline = false)
+
+        for ((annotationFqName, severity, scope) in experimentalities) {
             val isBodyUsageOfSourceOnlyExperimentality =
-                scope == Experimentality.Scope.SOURCE_ONLY && element.isBodyUsage()
+                scope == Experimentality.Scope.SOURCE_ONLY && isBodyUsage
 
             val isExperimentalityAccepted =
+                    isBodyUsageInSameModule ||
                     (isBodyUsageOfSourceOnlyExperimentality &&
                      element.hasContainerAnnotatedWithUseExperimental(annotationFqName, trace.bindingContext)) ||
                     element.propagates(annotationFqName, trace.bindingContext)
@@ -127,12 +134,12 @@ object ExperimentalUsageChecker : CallChecker {
     // If that's the case, one can opt-in to using the corresponding experimental API by annotating this element (or any of its
     // enclosing declarations) with @UseExperimental(X::class), not requiring propagation of the experimental annotation to the call sites.
     // (Note that this is allowed only if X's scope is SOURCE_ONLY.)
-    private fun PsiElement.isBodyUsage(): Boolean {
+    private fun PsiElement.isBodyUsage(allowInline: Boolean = true): Boolean {
         var element = this
         while (true) {
             val parent = element.parent ?: return false
 
-            if (element == (parent as? KtDeclarationWithBody)?.bodyExpression ||
+            if (element == (parent as? KtDeclarationWithBody)?.bodyExpression?.takeIf { allowInline || !parent.isInline } ||
                 element == (parent as? KtDeclarationWithInitializer)?.initializer ||
                 element == (parent as? KtClassInitializer)?.body ||
                 element == (parent as? KtParameter)?.defaultValue ||
@@ -144,6 +151,13 @@ object ExperimentalUsageChecker : CallChecker {
             element = parent
         }
     }
+
+    private val PsiElement.isInline: Boolean
+        get() = when (this) {
+            is KtFunction -> hasModifier(KtTokens.INLINE_KEYWORD)
+            is KtPropertyAccessor -> hasModifier(KtTokens.INLINE_KEYWORD) || property.hasModifier(KtTokens.INLINE_KEYWORD)
+            else -> false
+        }
 
     // Checks whether any of the non-local enclosing declarations is annotated with annotationFqName, effectively requiring
     // propagation for the experimental annotation to the call sites
@@ -190,7 +204,7 @@ object ExperimentalUsageChecker : CallChecker {
 
     object ClassifierUsage : ClassifierUsageChecker {
         override fun check(targetDescriptor: ClassifierDescriptor, element: PsiElement, context: ClassifierUsageCheckerContext) {
-            checkExperimental(targetDescriptor, element, context.trace)
+            checkExperimental(targetDescriptor, element, context.trace, context.moduleDescriptor)
         }
     }
 

@@ -1,3 +1,4 @@
+// MODULE: api
 // FILE: api.kt
 
 package api
@@ -16,6 +17,7 @@ fun sourceOnly() {}
 @BinaryExperimentalAPI
 fun binary() {}
 
+// MODULE: usage(api)
 // FILE: usage.kt
 
 @file:UseExperimental(SourceOnlyExperimentalAPI::class)

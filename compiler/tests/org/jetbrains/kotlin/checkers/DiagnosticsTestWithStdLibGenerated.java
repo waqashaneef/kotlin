@@ -1755,6 +1755,12 @@ public class DiagnosticsTestWithStdLibGenerated extends AbstractDiagnosticsTestW
             doTest(fileName);
         }
 
+        @TestMetadata("bodyUsageInSameModule.kt")
+        public void testBodyUsageInSameModule() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/testsWithStdLib/experimental/bodyUsageInSameModule.kt");
+            doTest(fileName);
+        }
+
         @TestMetadata("bodyUsages.kt")
         public void testBodyUsages() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/diagnostics/testsWithStdLib/experimental/bodyUsages.kt");

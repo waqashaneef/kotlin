@@ -1,3 +1,4 @@
+// MODULE: api
 // FILE: api.kt
 
 package api
@@ -9,6 +10,7 @@ annotation class BinaryExperimental
 @BinaryExperimental
 val x = ""
 
+// MODULE: usage(api)
 // FILE: usage.kt
 
 import api.*
