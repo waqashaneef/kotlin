@@ -64,16 +64,32 @@ object ExperimentalUsageChecker : CallChecker {
 
     override fun check(resolvedCall: ResolvedCall<*>, reportOn: PsiElement, context: CallCheckerContext) {
         // TODO: ensure reportOn is never a synthetic element
-        checkExperimental(resolvedCall.resultingDescriptor, reportOn, context.trace, context.moduleDescriptor)
+        checkExperimental(resolvedCall.resultingDescriptor, reportOn, context)
     }
 
-    private fun checkExperimental(descriptor: DeclarationDescriptor, element: PsiElement, trace: BindingTrace, module: ModuleDescriptor) {
+    private fun checkExperimental(descriptor: DeclarationDescriptor, element: PsiElement, context: CheckerContext) {
         val experimentalities = descriptor.loadExperimentalities()
-        if (experimentalities.isEmpty()) return
+        if (experimentalities.isNotEmpty()) {
+            checkExperimental(experimentalities, element, context.trace.bindingContext, descriptor.module == context.moduleDescriptor) {
+                annotationFqName, severity, isBodyUsageOfSourceOnlyExperimentality ->
+                val diagnostic = when (severity) {
+                    Experimentality.Severity.WARNING -> Errors.EXPERIMENTAL_API_USAGE
+                    Experimentality.Severity.ERROR -> Errors.EXPERIMENTAL_API_USAGE_ERROR
+                }
+                context.trace.report(diagnostic.on(element, annotationFqName, isBodyUsageOfSourceOnlyExperimentality))
+            }
+        }
+    }
 
+    private fun checkExperimental(
+        experimentalities: Collection<Experimentality>,
+        element: PsiElement,
+        bindingContext: BindingContext,
+        isUsageInSameModule: Boolean,
+        report: (annotationFqName: FqName, severity: Experimentality.Severity, isBodyUsageOfSourceOnlyExperimentality: Boolean) -> Unit
+    ) {
         val isBodyUsage: Boolean by lazy(LazyThreadSafetyMode.NONE) { element.isBodyUsage() }
-        val isBodyUsageInSameModule =
-            descriptor.module == module && element.isBodyUsage(allowInline = false)
+        val isBodyUsageInSameModule = isUsageInSameModule && element.isBodyUsage(allowInline = false)
 
         for ((annotationFqName, severity, scope) in experimentalities) {
             val isBodyUsageOfSourceOnlyExperimentality =
@@ -82,15 +98,11 @@ object ExperimentalUsageChecker : CallChecker {
             val isExperimentalityAccepted =
                     isBodyUsageInSameModule ||
                     (isBodyUsageOfSourceOnlyExperimentality &&
-                     element.hasContainerAnnotatedWithUseExperimental(annotationFqName, trace.bindingContext)) ||
-                    element.propagates(annotationFqName, trace.bindingContext)
+                     element.hasContainerAnnotatedWithUseExperimental(annotationFqName, bindingContext)) ||
+                    element.propagates(annotationFqName, bindingContext)
 
             if (!isExperimentalityAccepted) {
-                val diagnostic = when (severity) {
-                    ExperimentalUsageChecker.Experimentality.Severity.WARNING -> Errors.EXPERIMENTAL_API_USAGE
-                    ExperimentalUsageChecker.Experimentality.Severity.ERROR -> Errors.EXPERIMENTAL_API_USAGE_ERROR
-                }
-                trace.report(diagnostic.on(element, annotationFqName, isBodyUsageOfSourceOnlyExperimentality))
+                report(annotationFqName, severity, isBodyUsageOfSourceOnlyExperimentality)
             }
         }
     }
@@ -204,7 +216,29 @@ object ExperimentalUsageChecker : CallChecker {
 
     object ClassifierUsage : ClassifierUsageChecker {
         override fun check(targetDescriptor: ClassifierDescriptor, element: PsiElement, context: ClassifierUsageCheckerContext) {
-            checkExperimental(targetDescriptor, element, context.trace, context.moduleDescriptor)
+            checkExperimental(targetDescriptor, element, context)
+        }
+    }
+
+    object Overrides : DeclarationChecker {
+        override fun check(declaration: KtDeclaration, descriptor: DeclarationDescriptor, context: DeclarationCheckerContext) {
+            if (descriptor !is CallableMemberDescriptor) return
+
+            val experimentalOverridden = descriptor.overriddenDescriptors.flatMap { member ->
+                member.loadExperimentalities().map { experimentality -> experimentality to member }
+            }.toMap()
+
+            for ((experimentality, member) in experimentalOverridden) {
+                checkExperimental(listOf(experimentality), declaration, context.trace.bindingContext, isUsageInSameModule = false) {
+                    annotationFqName, severity, _ ->
+                    val diagnostic = when (severity) {
+                        Experimentality.Severity.WARNING -> Errors.EXPERIMENTAL_OVERRIDE
+                        Experimentality.Severity.ERROR -> Errors.EXPERIMENTAL_OVERRIDE_ERROR
+                    }
+                    val reportOn = (declaration as? KtNamedDeclaration)?.nameIdentifier ?: declaration
+                    context.trace.report(diagnostic.on(reportOn, annotationFqName, member.containingDeclaration))
+                }
+            }
         }
     }
 
