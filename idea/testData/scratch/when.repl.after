@@ -1,0 +1,5 @@
+val a = 1
+when(a) {    // OUTPUT: 1
+    1 -> println("1")
+    else -> println("else")
+}

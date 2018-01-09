@@ -23,10 +23,15 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.io.FileUtil
+import com.intellij.openapi.util.io.FileUtilRt
+import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiManager
 import com.intellij.testFramework.FileEditorManagerTestCase
 import com.intellij.testFramework.MapDataContext
+import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.util.ui.UIUtil
 import org.jetbrains.kotlin.idea.KotlinLanguage
@@ -34,9 +39,12 @@ import org.jetbrains.kotlin.idea.scratch.actions.RunScratchAction
 import org.jetbrains.kotlin.idea.scratch.output.InlayScratchOutputHandler
 import org.jetbrains.kotlin.idea.scratch.ui.scratchTopPanel
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
+import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.test.KotlinTestUtils
+import org.jetbrains.kotlin.test.MockLibraryUtil
 import org.junit.Assert
 import java.io.File
+import java.util.*
 
 abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
     fun doReplTest(fileName: String) {
@@ -45,6 +53,40 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
 
     fun doCompilingTest(fileName: String) {
         doTest(fileName, false)
+    }
+
+    fun doMultiFileTest(dirName: String) {
+        val javaFiles = arrayListOf<File>()
+        val kotlinFiles = arrayListOf<File>()
+        val baseDir = File(testDataPath, dirName)
+        baseDir.walk().forEach {
+            if (it.isFile) {
+                if (it.extension == "java") javaFiles.add(it)
+                if (it.extension == "kt") kotlinFiles.add(it)
+            }
+        }
+
+        javaFiles.forEach { myFixture.copyFileToProject(it.path, FileUtil.getRelativePath(baseDir, it)!!) }
+        kotlinFiles.forEach { myFixture.copyFileToProject(it.path, FileUtil.getRelativePath(baseDir, it)!!) }
+
+        val moduleOutputDir = FileUtil.createTempDirectory("scratchTest", "Output")
+
+        MockLibraryUtil.compileKotlin(baseDir.path, moduleOutputDir)
+
+        if (javaFiles.isNotEmpty()) {
+            val options = Arrays.asList("-d", moduleOutputDir.path)
+            KotlinTestUtils.compileJavaFiles(javaFiles, options)
+        }
+
+        PsiTestUtil.setCompilerOutputPath(
+            myModule,
+            VfsUtilCore.pathToUrl(FileUtil.toSystemIndependentName(moduleOutputDir.absolutePath)),
+            false
+        )
+
+        val mainFileName = "$dirName/${getTestName(true)}.kts"
+        doCompilingTest(mainFileName)
+        doReplTest(mainFileName)
     }
 
     fun doTest(fileName: String, isRepl: Boolean) {
@@ -61,9 +103,10 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
 
         myFixture.openFileInEditor(scratchFile)
 
-        ScratchFileLanguageProvider.createFile(myFixture.file)?.scratchTopPanel?.setReplMode(isRepl)
+        val psiFile = PsiManager.getInstance(project).findFile(scratchFile) ?: error("Couldn't find psi file ${sourceFile.path}")
+        ScratchFileLanguageProvider.createFile(psiFile)?.scratchTopPanel?.setReplMode(isRepl)
 
-        val event = getActionEvent(myFixture.file.virtualFile, RunScratchAction())
+        val event = getActionEvent(scratchFile, RunScratchAction())
         launchAction(event, RunScratchAction())
 
         UIUtil.dispatchAllInvocationEvents()
@@ -77,9 +120,13 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
         UIUtil.dispatchAllInvocationEvents()
 
         val editors = FileEditorManager.getInstance(project).getEditors(scratchFile).filterIsInstance<TextEditor>()
-        val doc = PsiDocumentManager.getInstance(project).getDocument(myFixture.file) ?: error("Document for ${myFixture.file.name} is null")
+        val doc =
+            PsiDocumentManager.getInstance(project).getDocument(myFixture.file) ?: error("Document for ${myFixture.file.name} is null")
 
-        val actualOutput = StringBuilder(myFixture.file.text)
+        FileEditorManager.getInstance(project).closeFile(scratchFile)
+        runWriteAction { scratchFile.delete(this) }
+
+        val actualOutput = StringBuilder(psiFile.text)
         for (line in doc.lineCount - 1 downTo 0) {
             editors.flatMap { it.editor.inlayModel.getInlineElementsInRange(doc.getLineStartOffset(line), doc.getLineEndOffset(line)) }
                 .map { it.renderer }
@@ -106,11 +153,23 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
     private fun getActionEvent(virtualFile: VirtualFile, action: AnAction): TestActionEvent {
         val context = MapDataContext()
         context.put(CommonDataKeys.VIRTUAL_FILE_ARRAY, arrayOf(virtualFile))
-        context.put<Project>(CommonDataKeys.PROJECT, myFixture.project)
+        context.put<Project>(CommonDataKeys.PROJECT, project)
         return TestActionEvent(context, action)
     }
 
     override fun getTestDataPath() = KotlinTestUtils.getHomeDirectory()
 
     override fun getProjectDescriptor() = KotlinWithJdkAndRuntimeLightProjectDescriptor.INSTANCE_FULL_JDK
+
+    override fun tearDown() {
+        try {
+            ScratchFileService.getInstance().scratchesMapping.mappings.forEach {
+                if (it.value == KotlinLanguage.INSTANCE) {
+                    it.key.delete(this)
+                }
+            }
+        } finally {
+            super.tearDown()
+        }
+    }
 }
