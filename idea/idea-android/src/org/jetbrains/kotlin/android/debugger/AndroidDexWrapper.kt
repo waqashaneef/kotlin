@@ -26,7 +26,18 @@ import org.jetbrains.kotlin.idea.debugger.evaluate.classLoading.ClassToLoad
 class AndroidDexWrapper {
     @Suppress("unused") // Used in AndroidOClassLoadingAdapter#dex
     fun dex(classes: Collection<ClassToLoad>): ByteArray? {
-        val dexArguments = Main.Arguments().apply { parse(arrayOf("testArgs")) }
+        val dexArguments = Main.Arguments().also { args ->
+            // 'parse()' method is private in newer versions of dex.
+            val parseMethod = args.javaClass.getDeclaredMethod("parse", Array<String>::class.java)
+            val oldIsAccessible = parseMethod.isAccessible
+
+            try {
+                parseMethod.isAccessible = true
+                parseMethod.invoke(args, arrayOf("testArgs"))
+            } finally {
+                parseMethod.isAccessible = oldIsAccessible
+            }
+        }
 
         val dexFile = DexFile(dexArguments.dexOptions)
 
