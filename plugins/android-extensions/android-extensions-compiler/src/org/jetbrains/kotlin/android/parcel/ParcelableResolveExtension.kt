@@ -120,11 +120,10 @@ open class ParcelableResolveExtension : SyntheticResolveExtension {
 internal fun SimpleFunctionDescriptor.isWriteToParcel(): Boolean {
     return typeParameters.isEmpty()
            && valueParameters.size == 2
-           && valueParameters[0].type.isParcel()
+           // Unfortunately, we can't check the first parameter cause it can be unresolved
            && KotlinBuiltIns.isInt(valueParameters[1].type)
+           && returnType?.let { KotlinBuiltIns.isUnit(it) } == true
 }
-
-private fun KotlinType.isParcel() = constructor.declarationDescriptor?.fqNameSafe == ANDROID_PARCEL_CLASS_FQNAME
 
 interface ParcelableSyntheticComponent {
     val componentKind: ComponentKind
