@@ -16,24 +16,18 @@
 
 package org.jetbrains.kotlin.idea.decompiler.navigation
 
-import com.intellij.openapi.roots.LibraryOrderEntry
-import com.intellij.openapi.roots.ModuleRootManager
-import com.intellij.openapi.roots.OrderRootType
-import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.testFramework.LightProjectDescriptor
-import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.idea.caches.resolve.lightClasses.KtLightClassForDecompiledDeclaration
 import org.jetbrains.kotlin.idea.test.JdkAndMockLibraryProjectDescriptor
 import org.jetbrains.kotlin.idea.test.PluginTestCaseBase
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
-import org.jetbrains.kotlin.utils.sure
 import kotlin.test.assertTrue
 
-class NavigateFromLibrarySourcesTest: LightCodeInsightFixtureTestCase() {
+class NavigateFromLibrarySourcesTest: AbstractNavigateFromLibrarySourcesTest() {
     fun testJdkClass() {
         checkNavigationFromLibrarySource("Thread", "java.lang.Thread")
     }
@@ -58,16 +52,6 @@ class NavigateFromLibrarySourcesTest: LightCodeInsightFixtureTestCase() {
 
     private fun checkNavigationFromLibrarySource(referenceText: String, targetFqName: String) {
         checkNavigationElement(navigationElementForReferenceInLibrarySource(referenceText), targetFqName)
-    }
-
-    private fun navigationElementForReferenceInLibrarySource(referenceText: String): PsiElement {
-        val libraryOrderEntry = ModuleRootManager.getInstance(myModule!!).orderEntries.first { it is LibraryOrderEntry }
-        val libSourcesRoot = libraryOrderEntry.getUrls(OrderRootType.SOURCES)[0]
-        val vf = VirtualFileManager.getInstance().findFileByUrl(libSourcesRoot + "/usage.kt")!!
-        val psiFile = psiManager.findFile(vf)!!
-        val indexOf = psiFile.text!!.indexOf(referenceText)
-        val reference = psiFile.findReferenceAt(indexOf)
-        return reference.sure { "Couldn't find reference" }.resolve().sure { "Couldn't resolve reference" }.navigationElement!!
     }
 
     override fun getProjectDescriptor(): LightProjectDescriptor {
