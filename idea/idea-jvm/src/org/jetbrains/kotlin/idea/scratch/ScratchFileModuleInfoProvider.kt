@@ -22,9 +22,11 @@ import com.intellij.openapi.components.AbstractProjectComponent
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.newvfs.FileAttribute
 import com.intellij.psi.PsiManager
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.caches.resolve.NotUnderContentRootModuleInfo
@@ -35,6 +37,7 @@ import org.jetbrains.kotlin.parsing.KotlinParserDefinition.Companion.STD_SCRIPT_
 import org.jetbrains.kotlin.parsing.KotlinParserDefinition.Companion.STD_SCRIPT_SUFFIX
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.moduleInfo
+import kotlin.reflect.KProperty
 
 class ScratchFileModuleInfoProvider(project: Project) : AbstractProjectComponent(project) {
 
@@ -65,6 +68,12 @@ class ScratchFileModuleInfoProvider(project: Project) : AbstractProjectComponent
             if (file.extension != STD_SCRIPT_SUFFIX) return
 
             getScratchPanels(ktFile).forEach { panel ->
+                val moduleName = ktFile.virtualFile.moduleName
+                if (moduleName != null) {
+                    val module = ModuleManager.getInstance(myProject).findModuleByName(moduleName)
+                    if (module != null) panel.setModule(module)
+                }
+
                 ktFile.moduleInfo = getModuleInfo(panel.getModule())
 
                 panel.addModuleListener {
@@ -73,6 +82,8 @@ class ScratchFileModuleInfoProvider(project: Project) : AbstractProjectComponent
                     ProjectRootManager.getInstance(myProject).incModificationCount()
                     // Force re-highlighting
                     DaemonCodeAnalyzer.getInstance(myProject).restart(ktFile)
+
+                    ktFile.virtualFile.moduleName = it.name
                 }
             }
         }
@@ -80,4 +91,20 @@ class ScratchFileModuleInfoProvider(project: Project) : AbstractProjectComponent
 
     private fun getModuleInfo(it: Module?) =
         it?.testSourceInfo() ?: it?.productionSourceInfo() ?: NotUnderContentRootModuleInfo
+}
+
+private var VirtualFile.moduleName: String? by ScratchModuleNameProperty()
+
+private class ScratchModuleNameProperty {
+    private val fileAttribute = FileAttribute("ScratchModuleName", 1, false)
+
+    operator fun getValue(file: VirtualFile, property: KProperty<*>): String? {
+        return fileAttribute.readAttributeBytes(file)?.let { String(it) }
+    }
+
+    operator fun setValue(file: VirtualFile, property: KProperty<*>, newValue: String?) {
+        if (newValue != null) {
+            fileAttribute.writeAttributeBytes(file, newValue.toByteArray())
+        }
+    }
 }
