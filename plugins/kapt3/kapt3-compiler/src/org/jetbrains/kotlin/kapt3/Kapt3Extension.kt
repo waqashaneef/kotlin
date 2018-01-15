@@ -71,12 +71,13 @@ class ClasspathBasedKapt3Extension(
         aptMode: AptMode,
         val useLightAnalysis: Boolean,
         correctErrorTypes: Boolean,
+        mapDiagnosticLocations: Boolean,
         pluginInitializedTime: Long,
         logger: KaptLogger,
         compilerConfiguration: CompilerConfiguration
 ) : AbstractKapt3Extension(compileClasspath, annotationProcessingClasspath, javaSourceRoots, sourcesOutputDir,
                            classFilesOutputDir, stubsOutputDir, incrementalDataOutputDir, options, javacOptions, annotationProcessors,
-                           aptMode, pluginInitializedTime, logger, correctErrorTypes, compilerConfiguration) {
+                           aptMode, pluginInitializedTime, logger, correctErrorTypes, mapDiagnosticLocations, compilerConfiguration) {
     override val analyzePartially: Boolean
         get() = useLightAnalysis
 
@@ -129,6 +130,7 @@ abstract class AbstractKapt3Extension(
         val pluginInitializedTime: Long,
         val logger: KaptLogger,
         val correctErrorTypes: Boolean,
+        val mapDiagnosticLocations: Boolean,
         val compilerConfiguration: CompilerConfiguration
 ) : PartialAnalysisHandlerExtension() {
     val compileClasspath = compileClasspath.distinct()
