@@ -1,0 +1,3 @@
+warning: experimental API marker org.test.BinaryWarning is deprecated. BinaryWarning
+warning: experimental API marker org.test.SourceWarning is deprecated. SourceWarning
+OK

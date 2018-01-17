@@ -1,0 +1,5 @@
+$TESTDATA_DIR$/experimentalDeprecatedWarning.kt
+-d
+$TEMP_DIR$
+-Xuse-experimental=org.test.SourceWarning
+-Xexperimental=org.test.BinaryWarning

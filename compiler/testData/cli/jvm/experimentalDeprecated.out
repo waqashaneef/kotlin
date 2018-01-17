@@ -1,0 +1,5 @@
+error: experimental API marker org.test.BinaryError is deprecated. BinaryError
+error: experimental API marker org.test.BinaryHidden is deprecated. BinaryHidden
+error: experimental API marker org.test.SourceError is deprecated. SourceError
+error: experimental API marker org.test.SourceHidden is deprecated. SourceHidden
+COMPILATION_ERROR

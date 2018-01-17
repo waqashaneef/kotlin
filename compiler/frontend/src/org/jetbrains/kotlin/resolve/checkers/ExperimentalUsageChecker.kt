@@ -39,6 +39,7 @@ import org.jetbrains.kotlin.resolve.constants.KClassValue
 import org.jetbrains.kotlin.resolve.descriptorUtil.annotationClass
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
+import org.jetbrains.kotlin.storage.LockBasedStorageManager
 import org.jetbrains.kotlin.utils.SmartSet
 import org.jetbrains.kotlin.utils.addIfNotNull
 
@@ -228,7 +229,17 @@ object ExperimentalUsageChecker : CallChecker {
         }
     }
 
-    fun checkCompilerArguments(module: ModuleDescriptor, languageVersionSettings: LanguageVersionSettings, reportError: (String) -> Unit) {
+    fun checkCompilerArguments(
+        module: ModuleDescriptor,
+        languageVersionSettings: LanguageVersionSettings,
+        reportError: (String) -> Unit,
+        reportWarning: (String) -> Unit
+    ) {
+        // Ideally, we should run full resolution (with all classifier usage checkers) on classifiers, used in "-Xexperimental" and
+        // "-Xuse-experimental" arguments. However, it's not easy to do this. This should be solved in the future with the support of
+        // module annotations. For now, we only check deprecations because this is needed to correctly retire unneeded compiler arguments.
+        val deprecationResolver = DeprecationResolver(LockBasedStorageManager(), languageVersionSettings)
+
         fun checkAnnotation(fqName: String, allowBinaryScope: Boolean): Boolean {
             val descriptor = module.resolveClassByFqName(FqName(fqName), NoLookupLocation.FOR_NON_TRACKED_SCOPE)
             val experimentality = descriptor?.loadExperimentalityForMarkerAnnotation()
@@ -240,9 +251,20 @@ object ExperimentalUsageChecker : CallChecker {
                     "Class $fqName is not an experimental API marker annotation"
                 !allowBinaryScope && experimentality.scope == Experimentality.Scope.BINARY ->
                     "Experimental API marker $fqName has binary scope, therefore it can't be used with -Xuse-experimental"
-                else -> return true
+                else -> {
+                    for (deprecation in deprecationResolver.getDeprecations(descriptor)) {
+                        val report = when (deprecation.deprecationLevel) {
+                            DeprecationLevelValue.WARNING -> reportWarning
+                            DeprecationLevelValue.ERROR, DeprecationLevelValue.HIDDEN -> reportError
+                        }
+                        report("Experimental API marker $fqName is deprecated" + deprecation.message?.let { ". $it" }.orEmpty())
+                    }
+                    return true
+                }
             }
+
             reportError(message)
+
             return false
         }
 

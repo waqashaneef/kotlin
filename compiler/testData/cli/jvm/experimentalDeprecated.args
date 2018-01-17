@@ -1,0 +1,7 @@
+$TESTDATA_DIR$/experimentalDeprecated.kt
+-d
+$TEMP_DIR$
+-Xexperimental=org.test.BinaryError
+-Xexperimental=org.test.BinaryHidden
+-Xuse-experimental=org.test.SourceError
+-Xuse-experimental=org.test.SourceHidden
