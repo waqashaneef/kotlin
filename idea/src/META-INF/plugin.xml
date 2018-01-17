@@ -58,6 +58,9 @@
     <component>
       <implementation-class>org.jetbrains.kotlin.idea.scratch.ScratchFileModuleInfoProvider</implementation-class>
     </component>
+    <component>
+      <implementation-class>org.jetbrains.kotlin.idea.scratch.actions.ScratchFileAutoRunner</implementation-class>
+    </component>
   </project-components>
 
   <application-components>

@@ -21,6 +21,14 @@ import com.intellij.psi.PsiFile
 
 abstract class ScratchFile(val psiFile: PsiFile) {
     abstract fun getExpressions(): List<ScratchExpression>
+
+    override fun equals(other: Any?): Boolean {
+        return (other as? ScratchFile)?.psiFile == this.psiFile
+    }
+
+    override fun hashCode(): Int {
+        return psiFile.hashCode()
+    }
 }
 
 data class ScratchExpression(val element: PsiElement, val lineStart: Int, val lineEnd: Int = lineStart)

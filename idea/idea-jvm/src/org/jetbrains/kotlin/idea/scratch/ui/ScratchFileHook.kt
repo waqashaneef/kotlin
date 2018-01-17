@@ -24,6 +24,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import org.jetbrains.kotlin.idea.scratch.*
+import org.jetbrains.kotlin.idea.scratch.actions.ScratchFileAutoRunner
 
 class ScratchFileHook(project: Project) : AbstractProjectComponent(project) {
 
@@ -49,6 +50,7 @@ class ScratchFileHook(project: Project) : AbstractProjectComponent(project) {
             val panel = ScratchTopPanel.createPanel(myProject, file) ?: return
             getAllEditorsWithoutScratchPanel(myProject, file).forEach { editor ->
                 editor.addScratchPanel(panel)
+                ScratchFileAutoRunner.getInstance(myProject).addListener(editor.editor.document)
             }
         }
 
@@ -57,6 +59,7 @@ class ScratchFileHook(project: Project) : AbstractProjectComponent(project) {
 
             getAllEditorsWithScratchPanel(myProject, file).forEach { (editor, panel) ->
                 editor.removeScratchPanel(panel)
+                ScratchFileAutoRunner.getInstance(myProject).removeListener(editor.editor.document)
             }
         }
     }

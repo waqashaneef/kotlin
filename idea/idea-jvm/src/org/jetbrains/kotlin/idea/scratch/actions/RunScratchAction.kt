@@ -28,68 +28,77 @@ import org.jetbrains.kotlin.idea.scratch.ScratchFileLanguageProvider
 import org.jetbrains.kotlin.idea.scratch.getScratchPanelFromSelectedEditor
 import org.jetbrains.kotlin.idea.scratch.output.ProgressBarOutputHandler
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandlerAdapter
+import org.jetbrains.kotlin.idea.scratch.ui.ScratchTopPanel
 
 class RunScratchAction : AnAction(
     KotlinBundle.message("scratch.run.button"),
     KotlinBundle.message("scratch.run.button") + " (${KeymapUtil.getShortcutText(KeyboardShortcut.fromString(shortcut))})",
     AllIcons.Actions.Execute
 ) {
-    companion object {
-        const val shortcut = "ctrl alt W"
-    }
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
         val scratchTopPanel = getScratchPanelFromSelectedEditor(project) ?: return
-        val scratchFile = scratchTopPanel.scratchFile
+        doAction(scratchTopPanel)
+    }
 
-        val isMakeBeforeRun = scratchTopPanel.isMakeBeforeRun()
-        val isRepl = scratchTopPanel.isRepl()
+    override fun update(e: AnActionEvent) {
+        val project = e.project ?: return
+        val scratchTopPanel = getScratchPanelFromSelectedEditor(project) ?: return
+        e.presentation.isEnabled = !scratchTopPanel.isCompilerRunning()
+    }
 
-        val provider = ScratchFileLanguageProvider.get(scratchFile.psiFile.language) ?: return
+    companion object {
+        const val shortcut = "ctrl alt W"
 
-        val handler = provider.getOutputHandler()
+        fun doAction(scratchTopPanel: ScratchTopPanel) {
+            val scratchFile = scratchTopPanel.scratchFile
 
-        val module = scratchTopPanel.getModule()
-        if (module == null) {
-            handler.error(scratchFile, "Module should be selected")
-            handler.onFinish(scratchFile)
-            return
-        }
+            val isMakeBeforeRun = scratchTopPanel.isMakeBeforeRun()
+            val isRepl = scratchTopPanel.isRepl()
 
-        val runnable = r@ {
-            val executor = if (isRepl) provider.createReplExecutor(scratchFile) else provider.createCompilingExecutor(scratchFile)
-            if (executor == null) {
-                handler.error(scratchFile, "Couldn't run ${scratchFile.psiFile.name}")
+            val provider = ScratchFileLanguageProvider.get(scratchFile.psiFile.language) ?: return
+
+            val handler = provider.getOutputHandler()
+
+            val module = scratchTopPanel.getModule()
+            if (module == null) {
+                handler.error(scratchFile, "Module should be selected")
                 handler.onFinish(scratchFile)
-                return@r
+                return
             }
 
-            e.presentation.isEnabled = false
-
-            if (isRepl) {
-                executor.addOutputHandler(ProgressBarOutputHandler)
-            }
-
-            executor.addOutputHandler(handler)
-
-            executor.addOutputHandler(
-                object : ScratchOutputHandlerAdapter() {
-                    override fun onFinish(file: ScratchFile) {
-                        e.presentation.isEnabled = true
-                    }
+            val runnable = r@ {
+                val executor = if (isRepl) provider.createReplExecutor(scratchFile) else provider.createCompilingExecutor(scratchFile)
+                if (executor == null) {
+                    handler.error(scratchFile, "Couldn't run ${scratchFile.psiFile.name}")
+                    handler.onFinish(scratchFile)
+                    return@r
                 }
-            )
 
-            executor.execute()
-        }
+                scratchTopPanel.startCompilation()
 
-        if (isMakeBeforeRun) {
-            CompilerManager.getInstance(project)
-                .make(module) { aborted, errors, _, _ -> if (!aborted && errors == 0) runnable() }
-        } else {
-            runnable()
+                if (isRepl) {
+                    executor.addOutputHandler(ProgressBarOutputHandler)
+                }
+
+                executor.addOutputHandler(handler)
+                executor.addOutputHandler(object : ScratchOutputHandlerAdapter() {
+                    override fun onFinish(file: ScratchFile) {
+                        scratchTopPanel.stopCompilation()
+                    }
+                })
+
+                executor.execute()
+            }
+
+            if (isMakeBeforeRun) {
+                CompilerManager.getInstance(scratchFile.psiFile.project)
+                    .make(module) { aborted, errors, _, _ -> if (!aborted && errors == 0) runnable() }
+            } else {
+                runnable()
+            }
         }
     }
 }

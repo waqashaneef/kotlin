@@ -20,12 +20,9 @@ import com.intellij.ide.scratch.ScratchFileService
 import com.intellij.ide.scratch.ScratchRootType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.io.FileUtil
-import com.intellij.openapi.util.io.FileUtilRt
-import com.intellij.openapi.vfs.VfsUtilCore
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
@@ -37,7 +34,6 @@ import com.intellij.util.ui.UIUtil
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.idea.scratch.actions.RunScratchAction
 import org.jetbrains.kotlin.idea.scratch.output.InlayScratchOutputHandler
-import org.jetbrains.kotlin.idea.scratch.ui.scratchTopPanel
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.test.KotlinTestUtils
@@ -47,6 +43,8 @@ import java.io.File
 import java.util.*
 
 abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
+    private val filesToDelete = mutableListOf<VirtualFile>()
+
     fun doReplTest(fileName: String) {
         doTest(fileName, true)
     }
@@ -69,20 +67,17 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
         javaFiles.forEach { myFixture.copyFileToProject(it.path, FileUtil.getRelativePath(baseDir, it)!!) }
         kotlinFiles.forEach { myFixture.copyFileToProject(it.path, FileUtil.getRelativePath(baseDir, it)!!) }
 
-        val moduleOutputDir = FileUtil.createTempDirectory("scratchTest", "Output")
+        val outputDir = runWriteAction { VfsUtil.createDirectoryIfMissing(project.baseDir,"out") }
+        filesToDelete.add(outputDir)
 
-        MockLibraryUtil.compileKotlin(baseDir.path, moduleOutputDir)
+        MockLibraryUtil.compileKotlin(baseDir.path, File(outputDir.path))
 
         if (javaFiles.isNotEmpty()) {
-            val options = Arrays.asList("-d", moduleOutputDir.path)
+            val options = Arrays.asList("-d", outputDir.path)
             KotlinTestUtils.compileJavaFiles(javaFiles, options)
         }
 
-        PsiTestUtil.setCompilerOutputPath(
-            myModule,
-            VfsUtilCore.pathToUrl(FileUtil.toSystemIndependentName(moduleOutputDir.absolutePath)),
-            false
-        )
+        PsiTestUtil.setCompilerOutputPath(myModule, outputDir.url, false)
 
         val mainFileName = "$dirName/${getTestName(true)}.kts"
         doCompilingTest(mainFileName)
@@ -101,41 +96,44 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
             ScratchFileService.Option.create_new_always
         ) ?: error("Couldn't create scratch file ${sourceFile.path}")
 
+        filesToDelete.add(scratchFile)
+
         myFixture.openFileInEditor(scratchFile)
 
         val psiFile = PsiManager.getInstance(project).findFile(scratchFile) ?: error("Couldn't find psi file ${sourceFile.path}")
-        ScratchFileLanguageProvider.createFile(psiFile)?.scratchTopPanel?.setReplMode(isRepl)
+        val scratchPanel = getScratchPanels(psiFile).firstOrNull() ?: error("Couldn't find scratch panel")
+        scratchPanel.setReplMode(isRepl)
 
         val event = getActionEvent(scratchFile, RunScratchAction())
         launchAction(event, RunScratchAction())
 
         UIUtil.dispatchAllInvocationEvents()
 
-        val start = System.currentTimeMillis()
         // wait until output is displayed in editor or for 1 minute
-        while (!event.presentation.isEnabled && (System.currentTimeMillis() - start) < 60000) {
+        val start = System.currentTimeMillis()
+        while (scratchPanel.isCompilerRunning() && (System.currentTimeMillis() - start) < 60000) {
             Thread.sleep(5000)
         }
 
         UIUtil.dispatchAllInvocationEvents()
 
-        val editors = FileEditorManager.getInstance(project).getEditors(scratchFile).filterIsInstance<TextEditor>()
-        val doc =
-            PsiDocumentManager.getInstance(project).getDocument(myFixture.file) ?: error("Document for ${myFixture.file.name} is null")
-
-        FileEditorManager.getInstance(project).closeFile(scratchFile)
-        runWriteAction { scratchFile.delete(this) }
+        val doc = PsiDocumentManager.getInstance(project).getDocument(psiFile) ?: error("Document for ${psiFile.name} is null")
 
         val actualOutput = StringBuilder(psiFile.text)
         for (line in doc.lineCount - 1 downTo 0) {
-            editors.flatMap { it.editor.inlayModel.getInlineElementsInRange(doc.getLineStartOffset(line), doc.getLineEndOffset(line)) }
-                .map { it.renderer }
+            getAllEditorsWithScratchPanel(
+                project,
+                psiFile.virtualFile
+            ).flatMap { (editor, _) ->
+                editor.editor.inlayModel.getInlineElementsInRange(
+                    doc.getLineStartOffset(line),
+                    doc.getLineEndOffset(line)
+                )
+            }.map { it.renderer }
                 .filterIsInstance<InlayScratchOutputHandler.ScratchFileRenderer>()
                 .forEach {
                     val str = it.toString()
-
-                    val offset = doc.getLineEndOffset(line)
-                    actualOutput.insert(offset, "    // $str")
+                    val offset = doc.getLineEndOffset(line); actualOutput.insert(offset, "    // $str")
                 }
         }
 
@@ -162,14 +160,8 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
     override fun getProjectDescriptor() = KotlinWithJdkAndRuntimeLightProjectDescriptor.INSTANCE_FULL_JDK
 
     override fun tearDown() {
-        try {
-            ScratchFileService.getInstance().scratchesMapping.mappings.forEach {
-                if (it.value == KotlinLanguage.INSTANCE) {
-                    it.key.delete(this)
-                }
-            }
-        } finally {
-            super.tearDown()
-        }
+        super.tearDown()
+        runWriteAction { filesToDelete.forEach { it.delete(this) } }
+
     }
 }

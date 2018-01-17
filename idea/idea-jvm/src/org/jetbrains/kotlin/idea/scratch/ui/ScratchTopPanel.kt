@@ -18,10 +18,7 @@ package org.jetbrains.kotlin.idea.scratch.ui
 
 
 import com.intellij.application.options.ModulesComboBox
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.CustomShortcutSet
-import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -32,6 +29,7 @@ import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.idea.scratch.ScratchFileLanguageProvider
 import org.jetbrains.kotlin.idea.scratch.actions.ClearScratchAction
 import org.jetbrains.kotlin.idea.scratch.actions.RunScratchAction
+import org.jetbrains.kotlin.idea.scratch.getAllEditorsWithScratchPanel
 import org.jetbrains.kotlin.idea.scratch.getScratchPanels
 import javax.swing.*
 
@@ -49,12 +47,17 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
 
     val progressBar: JProgressBar
 
+    private val actionsToolBar: ActionToolbar
     private val moduleChooser: ModulesComboBox
     private val isReplCheckbox: JCheckBox
     private val isMakeBeforeRunCheckbox: JCheckBox
+    private val isInteractiveModeCheckbox: JCheckBox
+
+    private var isCompilerRunning: Boolean = false
 
     init {
-        add(createActionsToolbar())
+        actionsToolBar = createActionsToolbar()
+        add(actionsToolBar.component)
 
         isReplCheckbox = JCheckBox("Use REPL", false).customize()
         add(isReplCheckbox)
@@ -63,6 +66,11 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
 
         isMakeBeforeRunCheckbox = JCheckBox("Make before Run", false).customize()
         add(isMakeBeforeRunCheckbox)
+
+        add(JSeparator(SwingConstants.VERTICAL))
+
+        isInteractiveModeCheckbox = JCheckBox("Interactive Mode", false).customize()
+        add(isInteractiveModeCheckbox)
 
         add(JSeparator(SwingConstants.VERTICAL))
 
@@ -89,10 +97,23 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
 
     fun isRepl() = isReplCheckbox.isSelected
     fun isMakeBeforeRun() = isMakeBeforeRunCheckbox.isSelected
+    fun isInteractiveMode() = isInteractiveModeCheckbox.isSelected
+
+    fun isCompilerRunning() = isCompilerRunning
 
     @TestOnly
     fun setReplMode(isSelected: Boolean) {
         isReplCheckbox.isSelected = isSelected
+    }
+
+    fun startCompilation() {
+        isCompilerRunning = true
+        actionsToolBar.updateActionsImmediately()
+    }
+
+    fun stopCompilation() {
+        isCompilerRunning = false
+        actionsToolBar.updateActionsImmediately()
     }
 
     private fun JCheckBox.customize(): JCheckBox {
@@ -101,20 +122,19 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
         return this
     }
 
-    private fun createActionsToolbar(): JComponent {
+    private fun createActionsToolbar(): ActionToolbar {
         val toolbarGroup = DefaultActionGroup().apply {
             val runAction = RunScratchAction()
-            getAllEditorsWithScratchPanel(scratchFile.psiFile.project, scratchFile.psiFile.virtualFile).forEach {
-                runAction.registerCustomShortcutSet(CustomShortcutSet.fromString(RunScratchAction.shortcut), it.component)
+            getAllEditorsWithScratchPanel(scratchFile.psiFile.project, scratchFile.psiFile.virtualFile).forEach { (editor, _) ->
+                runAction.registerCustomShortcutSet(CustomShortcutSet.fromString(RunScratchAction.shortcut), editor.component)
             }
-            add(runAction)
 
-            add(RunScratchAction())
+            add(runAction)
             addSeparator()
             add(ClearScratchAction())
         }
 
-        return ActionManager.getInstance().createActionToolbar(ActionPlaces.EDITOR_TOOLBAR, toolbarGroup, true).component
+        return ActionManager.getInstance().createActionToolbar(ActionPlaces.EDITOR_TOOLBAR, toolbarGroup, true)
     }
 
     private fun createModuleChooser(project: Project): ModulesComboBox {

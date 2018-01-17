@@ -44,6 +44,7 @@ import org.jetbrains.kotlin.idea.scratch.ScratchExpression
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutput
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputType
+import org.jetbrains.kotlin.idea.scratch.ui.scratchTopPanel
 import org.jetbrains.kotlin.idea.util.application.runReadAction
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
@@ -58,7 +59,7 @@ class KtCompilingExecutor(file: ScratchFile) : ScratchExecutor(file) {
     override fun execute() {
         handlers.forEach { it.onStart(file) }
 
-        val module = file.module ?: return error("Module should be selected")
+        val module = file.scratchTopPanel?.getModule() ?: return error("Module should be selected")
 
         if (!checkForErrors(file.psiFile as KtFile)) {
             return error("Compilation Error")
