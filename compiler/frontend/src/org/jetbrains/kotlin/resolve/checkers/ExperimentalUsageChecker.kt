@@ -73,8 +73,10 @@ object ExperimentalUsageChecker : CallChecker {
     private fun checkExperimental(descriptor: DeclarationDescriptor, element: PsiElement, context: CheckerContext) {
         val experimentalities = descriptor.loadExperimentalities()
         if (experimentalities.isNotEmpty()) {
-            checkExperimental(experimentalities, element, context.trace.bindingContext, descriptor.module == context.moduleDescriptor) {
-                annotationFqName, severity, isBodyUsageOfSourceOnlyExperimentality ->
+            checkExperimental(
+                experimentalities, element, context.trace.bindingContext, context.languageVersionSettings,
+                descriptor.module == context.moduleDescriptor
+            ) { annotationFqName, severity, isBodyUsageOfSourceOnlyExperimentality ->
                 val diagnostic = when (severity) {
                     Experimentality.Severity.WARNING -> Errors.EXPERIMENTAL_API_USAGE
                     Experimentality.Severity.ERROR -> Errors.EXPERIMENTAL_API_USAGE_ERROR
@@ -88,6 +90,7 @@ object ExperimentalUsageChecker : CallChecker {
         experimentalities: Collection<Experimentality>,
         element: PsiElement,
         bindingContext: BindingContext,
+        languageVersionSettings: LanguageVersionSettings,
         isUsageInSameModule: Boolean,
         report: (annotationFqName: FqName, severity: Experimentality.Severity, isBodyUsageOfSourceOnlyExperimentality: Boolean) -> Unit
     ) {
@@ -101,8 +104,8 @@ object ExperimentalUsageChecker : CallChecker {
             val isExperimentalityAccepted =
                     isBodyUsageInSameModule ||
                     (isBodyUsageOfSourceOnlyExperimentality &&
-                     element.hasContainerAnnotatedWithUseExperimental(annotationFqName, bindingContext)) ||
-                    element.propagates(annotationFqName, bindingContext)
+                     element.hasContainerAnnotatedWithUseExperimental(annotationFqName, bindingContext, languageVersionSettings)) ||
+                    element.propagates(annotationFqName, bindingContext, languageVersionSettings)
 
             if (!isExperimentalityAccepted) {
                 report(annotationFqName, severity, isBodyUsageOfSourceOnlyExperimentality)
@@ -176,7 +179,11 @@ object ExperimentalUsageChecker : CallChecker {
 
     // Checks whether any of the non-local enclosing declarations is annotated with annotationFqName, effectively requiring
     // propagation for the experimental annotation to the call sites
-    private fun PsiElement.propagates(annotationFqName: FqName, bindingContext: BindingContext): Boolean {
+    private fun PsiElement.propagates(
+        annotationFqName: FqName,
+        bindingContext: BindingContext,
+        languageVersionSettings: LanguageVersionSettings
+    ): Boolean {
         var element = this
         while (true) {
             if (element is KtDeclaration) {
@@ -189,12 +196,16 @@ object ExperimentalUsageChecker : CallChecker {
             element = element.parent ?: break
         }
 
-        return false
+        return annotationFqName.asString() in languageVersionSettings.getFlag(AnalysisFlag.experimental)
     }
 
     // Checks whether there's an element lexically above the tree, that is annotated with `@UseExperimental(X::class)`
     // where annotationFqName is the FQ name of X
-    private fun PsiElement.hasContainerAnnotatedWithUseExperimental(annotationFqName: FqName, bindingContext: BindingContext): Boolean {
+    private fun PsiElement.hasContainerAnnotatedWithUseExperimental(
+        annotationFqName: FqName,
+        bindingContext: BindingContext,
+        languageVersionSettings: LanguageVersionSettings
+    ): Boolean {
         var element = this
         while (true) {
             if (element is KtAnnotated && element.annotationEntries.any { entry ->
@@ -205,7 +216,7 @@ object ExperimentalUsageChecker : CallChecker {
             element = element.parent ?: break
         }
 
-        return false
+        return annotationFqName.asString() in languageVersionSettings.getFlag(AnalysisFlag.useExperimental)
     }
 
     private fun AnnotationDescriptor.isUseExperimental(annotationFqName: FqName): Boolean {
@@ -260,8 +271,10 @@ object ExperimentalUsageChecker : CallChecker {
             }.toMap()
 
             for ((experimentality, member) in experimentalOverridden) {
-                checkExperimental(listOf(experimentality), declaration, context.trace.bindingContext, isUsageInSameModule = false) {
-                    annotationFqName, severity, _ ->
+                checkExperimental(
+                    listOf(experimentality), declaration, context.trace.bindingContext, context.languageVersionSettings,
+                    isUsageInSameModule = false
+                ) { annotationFqName, severity, _ ->
                     val diagnostic = when (severity) {
                         Experimentality.Severity.WARNING -> Errors.EXPERIMENTAL_OVERRIDE
                         Experimentality.Severity.ERROR -> Errors.EXPERIMENTAL_OVERRIDE_ERROR
