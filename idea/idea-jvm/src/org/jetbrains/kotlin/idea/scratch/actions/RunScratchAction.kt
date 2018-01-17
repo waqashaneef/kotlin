@@ -19,20 +19,25 @@ package org.jetbrains.kotlin.idea.scratch.actions
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.compiler.CompilerManager
+import com.intellij.openapi.keymap.KeymapUtil
 import org.jetbrains.kotlin.idea.KotlinBundle
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.idea.scratch.ScratchFileLanguageProvider
-import org.jetbrains.kotlin.idea.scratch.output.ProgressBarOutputHandler
 import org.jetbrains.kotlin.idea.scratch.getScratchPanelFromSelectedEditor
+import org.jetbrains.kotlin.idea.scratch.output.ProgressBarOutputHandler
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandlerAdapter
-import org.jetbrains.kotlin.idea.scratch.ui.scratchTopPanel
 
 class RunScratchAction : AnAction(
     KotlinBundle.message("scratch.run.button"),
-    KotlinBundle.message("scratch.run.button"),
+    KotlinBundle.message("scratch.run.button") + " (${KeymapUtil.getShortcutText(KeyboardShortcut.fromString(shortcut))})",
     AllIcons.Actions.Execute
 ) {
+    companion object {
+        const val shortcut = "ctrl alt W"
+    }
+
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 

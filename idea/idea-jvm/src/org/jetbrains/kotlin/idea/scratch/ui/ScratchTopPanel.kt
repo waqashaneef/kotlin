@@ -20,6 +20,7 @@ package org.jetbrains.kotlin.idea.scratch.ui
 import com.intellij.application.options.ModulesComboBox
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
@@ -102,6 +103,12 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
 
     private fun createActionsToolbar(): JComponent {
         val toolbarGroup = DefaultActionGroup().apply {
+            val runAction = RunScratchAction()
+            getAllEditorsWithScratchPanel(scratchFile.psiFile.project, scratchFile.psiFile.virtualFile).forEach {
+                runAction.registerCustomShortcutSet(CustomShortcutSet.fromString(RunScratchAction.shortcut), it.component)
+            }
+            add(runAction)
+
             add(RunScratchAction())
             addSeparator()
             add(ClearScratchAction())
