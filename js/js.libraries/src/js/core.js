@@ -32,7 +32,7 @@ Kotlin.equals = function (obj1, obj2) {
     }
 
     if (typeof obj1 === "number" && typeof obj2 === "number") {
-        return obj1 === obj2 && 1 / obj1 / obj2 >= 0
+        return obj1 === obj2 && (obj1 !== 0 || 1 / obj1 === 1 / obj2)
     }
 
     return obj1 === obj2;

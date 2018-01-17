@@ -33,16 +33,17 @@ Kotlin.primitiveCompareTo = function (a, b) {
 };
 
 Kotlin.doubleCompareTo = function (a, b) {
-    if (a < b) {
-        return -1;
+    if (a < b) return -1;
+    if (a > b) return 1;
+
+    if (a === b) {
+        if (a !== 0) return 0;
+
+        var ia = 1 / a;
+        return ia === 1 / b ? 0 : (ia < 0 ? -1 : 1);
     }
-    else if (a > b) {
-        return 1;
-    }
-    else {
-        var invA = 1 / a;
-        return invA / b >= 0 ? 0 : b === b && !(invA < 0) ? 1 : a !== a ? 0 : -1
-    }
+
+    return a !== a ? (b !== b ? 0 : 1) : -1
 };
 
 Kotlin.charInc = function (value) {
