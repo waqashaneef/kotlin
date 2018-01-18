@@ -35,8 +35,9 @@ class IncrementalPackagePartProvider(
         }
     }
 
-    override fun findPackageParts(packageFqName: String): List<String> {
-        return (moduleMappings().mapNotNull { it.findPackageParts(packageFqName) }.flatMap { it.parts } +
-                parent.findPackageParts(packageFqName)).distinct()
+    override fun findPackageParts(packageFqName: String): List<Pair<ModuleMapping, String>> {
+        return moduleMappings().flatMap { mapping ->
+            mapping.findPackageParts(packageFqName)?.parts?.map { mapping to it }.orEmpty()
+        } + parent.findPackageParts(packageFqName)
     }
 }

@@ -38,35 +38,33 @@ class JvmPackagePartProvider(
 
     private val loadedModules: MutableList<ModuleMappingInfo> = SmartList()
 
-    override fun findPackageParts(packageFqName: String): List<String> {
-        val rootToPackageParts = getPackageParts(packageFqName)
-        if (rootToPackageParts.isEmpty()) return emptyList()
+    override fun findPackageParts(packageFqName: String): List<Pair<ModuleMapping, String>> {
+        val allPackageParts = getPackageParts(packageFqName)
+        if (allPackageParts.isEmpty()) return emptyList()
 
-        val result = linkedSetOf<String>()
+        val result = mutableListOf<Pair<ModuleMapping, String>>()
         val visitedMultifileFacades = linkedSetOf<String>()
-        for ((_, packageParts) in rootToPackageParts) {
+        for ((moduleMapping, packageParts) in allPackageParts) {
             for (name in packageParts.parts) {
                 val facadeName = packageParts.getMultifileFacadeName(name)
                 if (facadeName == null || facadeName !in visitedMultifileFacades) {
-                    result.add(name)
+                    result.add(moduleMapping to name)
                 }
             }
             packageParts.parts.mapNotNullTo(visitedMultifileFacades, packageParts::getMultifileFacadeName)
         }
-        return result.toList()
+        return result
     }
 
     override fun findMetadataPackageParts(packageFqName: String): List<String> =
-            getPackageParts(packageFqName).values.flatMap(PackageParts::metadataParts).distinct()
+            getPackageParts(packageFqName).flatMap { (_, parts) -> parts.metadataParts }.distinct()
 
     @Synchronized
-    private fun getPackageParts(packageFqName: String): Map<VirtualFile, PackageParts> {
-        val result = mutableMapOf<VirtualFile, PackageParts>()
-        for ((root, mapping) in loadedModules) {
-            val newParts = mapping.findPackageParts(packageFqName) ?: continue
-            result[root]?.let { parts -> parts += newParts } ?: result.put(root, newParts)
+    private fun getPackageParts(packageFqName: String): Collection<Pair<ModuleMapping, PackageParts>> {
+        return loadedModules.mapNotNull { module ->
+            val mapping = module.mapping
+            mapping.findPackageParts(packageFqName)?.let { parts -> mapping to parts }
         }
-        return result
     }
 
     fun addRoots(roots: List<JavaRoot>) {

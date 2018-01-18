@@ -39,7 +39,8 @@ class LazyJavaPackageFragment(
     private val c = outerContext.childForClassOrPackage(this)
 
     internal val binaryClasses by c.storageManager.createLazyValue {
-        c.components.packagePartProvider.findPackageParts(fqName.asString()).mapNotNull { partName ->
+        c.components.packagePartProvider.findPackageParts(fqName.asString()).mapNotNull { (moduleMapping, partName) ->
+            // TODO: use moduleMapping
             val classId = ClassId.topLevel(JvmClassName.byInternalName(partName).fqNameForTopLevelClassMaybeWithDollars)
             c.components.kotlinClassFinder.findKotlinClass(classId)?.let { partName to it }
         }.toMap()

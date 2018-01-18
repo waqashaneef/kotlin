@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.serialization.deserialization.DeserializationConfigu
 import java.util.concurrent.ConcurrentHashMap
 
 class RuntimePackagePartProvider(private val classLoader: ClassLoader) : PackagePartProvider {
-    private val module2Mapping = ConcurrentHashMap<String, ModuleMapping>()
+    private val moduleToMapping = ConcurrentHashMap<String, ModuleMapping>()
 
     fun registerModule(moduleName: String) {
         val mapping = try {
@@ -35,10 +35,12 @@ class RuntimePackagePartProvider(private val classLoader: ClassLoader) : Package
             // TODO: do not swallow this exception?
             null
         }
-        module2Mapping.putIfAbsent(moduleName, mapping ?: ModuleMapping.EMPTY)
+        moduleToMapping.putIfAbsent(moduleName, mapping ?: ModuleMapping.EMPTY)
     }
 
-    override fun findPackageParts(packageFqName: String): List<String> {
-        return module2Mapping.values.mapNotNull { it.findPackageParts(packageFqName) }.flatMap { it.parts }.distinct()
+    override fun findPackageParts(packageFqName: String): List<Pair<ModuleMapping, String>> {
+        return moduleToMapping.values.flatMap { mapping ->
+            mapping.findPackageParts(packageFqName)?.parts?.map { mapping to it }.orEmpty()
+        }
     }
 }
