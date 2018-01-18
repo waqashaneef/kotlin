@@ -23,7 +23,7 @@ dependencies {
 
     compile(androidDxJar())
 
-    compileOnly(intellijDep()) { includeJars("openapi", "idea", "extensions", "util", "guava-21.0", "android-base-common", rootProject = rootProject) }
+    compileOnly(intellijDep()) { includeJars("openapi", "idea", "extensions", "util", "guava-19.0", "android-base-common", rootProject = rootProject) }
     compileOnly(intellijPluginDep("android")) {
         includeJars("android", "android-common", "sdk-common", "sdklib", "sdk-tools", "layoutlib-api")
     }
