@@ -81,7 +81,7 @@ fun createModuleResolverProvider(
     )
 
     val commonPlatformParameters = CommonAnalysisParameters(
-        packagePartProviderFactory = { _, c -> IDEPackagePartProvider(c.moduleContentScope) }
+        metadataPartProviderFactory = { _, c -> IDEPackagePartProvider(c.moduleContentScope) }
     )
 
     val resolverForProject = ResolverForProjectImpl(

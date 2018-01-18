@@ -39,7 +39,4 @@ class IncrementalPackagePartProvider(
         return (moduleMappings().mapNotNull { it.findPackageParts(packageFqName) }.flatMap { it.parts } +
                 parent.findPackageParts(packageFqName)).distinct()
     }
-
-    // TODO
-    override fun findMetadataPackageParts(packageFqName: String): List<String> = TODO()
 }

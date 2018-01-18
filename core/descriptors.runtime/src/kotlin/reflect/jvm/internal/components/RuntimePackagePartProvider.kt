@@ -41,7 +41,4 @@ class RuntimePackagePartProvider(private val classLoader: ClassLoader) : Package
     override fun findPackageParts(packageFqName: String): List<String> {
         return module2Mapping.values.mapNotNull { it.findPackageParts(packageFqName) }.flatMap { it.parts }.distinct()
     }
-
-    // TODO
-    override fun findMetadataPackageParts(packageFqName: String): List<String> = TODO()
 }

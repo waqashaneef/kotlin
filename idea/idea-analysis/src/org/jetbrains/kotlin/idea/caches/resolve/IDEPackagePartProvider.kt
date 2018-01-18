@@ -21,8 +21,10 @@ import com.intellij.util.indexing.FileBasedIndex
 import org.jetbrains.kotlin.descriptors.PackagePartProvider
 import org.jetbrains.kotlin.idea.vfilefinder.KotlinModuleMappingIndex
 import org.jetbrains.kotlin.load.kotlin.PackageParts
+import org.jetbrains.kotlin.serialization.deserialization.MetadataPartProvider
 
-class IDEPackagePartProvider(val scope: GlobalSearchScope) : PackagePartProvider {
+class IDEPackagePartProvider(val scope: GlobalSearchScope) : PackagePartProvider,
+    MetadataPartProvider {
     override fun findPackageParts(packageFqName: String): List<String> =
             getPackageParts(packageFqName).flatMap(PackageParts::parts).distinct()
 

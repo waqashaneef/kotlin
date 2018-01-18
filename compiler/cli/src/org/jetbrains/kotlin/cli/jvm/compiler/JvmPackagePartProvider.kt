@@ -25,12 +25,13 @@ import org.jetbrains.kotlin.descriptors.PackagePartProvider
 import org.jetbrains.kotlin.load.kotlin.ModuleMapping
 import org.jetbrains.kotlin.load.kotlin.PackageParts
 import org.jetbrains.kotlin.resolve.CompilerDeserializationConfiguration
+import org.jetbrains.kotlin.serialization.deserialization.MetadataPartProvider
 import java.io.EOFException
 
 class JvmPackagePartProvider(
         languageVersionSettings: LanguageVersionSettings,
         private val scope: GlobalSearchScope
-) : PackagePartProvider {
+) : PackagePartProvider, MetadataPartProvider {
     private data class ModuleMappingInfo(val root: VirtualFile, val mapping: ModuleMapping)
 
     private val deserializationConfiguration = CompilerDeserializationConfiguration(languageVersionSettings)
