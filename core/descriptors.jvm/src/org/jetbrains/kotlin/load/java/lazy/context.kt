@@ -17,7 +17,10 @@
 package org.jetbrains.kotlin.load.java.lazy
 
 import org.jetbrains.kotlin.builtins.ReflectionTypes
-import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.descriptors.ClassOrPackageFragmentDescriptor
+import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
+import org.jetbrains.kotlin.descriptors.ModuleDescriptor
+import org.jetbrains.kotlin.descriptors.SupertypeLoopChecker
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.incremental.components.LookupTracker
@@ -33,6 +36,7 @@ import org.jetbrains.kotlin.load.java.typeEnhancement.NullabilityQualifierWithMi
 import org.jetbrains.kotlin.load.java.typeEnhancement.SignatureEnhancement
 import org.jetbrains.kotlin.load.kotlin.DeserializedDescriptorResolver
 import org.jetbrains.kotlin.load.kotlin.KotlinClassFinder
+import org.jetbrains.kotlin.load.kotlin.PackagePartProvider
 import org.jetbrains.kotlin.serialization.deserialization.ErrorReporter
 import org.jetbrains.kotlin.storage.StorageManager
 import java.util.*
@@ -50,7 +54,7 @@ class JavaResolverComponents(
         val samConversionResolver: SamConversionResolver,
         val sourceElementFactory: JavaSourceElementFactory,
         val moduleClassResolver: ModuleClassResolver,
-        val packageMapper: PackagePartProvider,
+        val packagePartProvider: PackagePartProvider,
         val supertypeLoopChecker: SupertypeLoopChecker,
         val lookupTracker: LookupTracker,
         val module: ModuleDescriptor,
@@ -65,7 +69,7 @@ class JavaResolverComponents(
             storageManager, finder, kotlinClassFinder, deserializedDescriptorResolver,
             externalAnnotationResolver, signaturePropagator, errorReporter, javaResolverCache,
             javaPropertyInitializerEvaluator, samConversionResolver, sourceElementFactory,
-            moduleClassResolver, packageMapper, supertypeLoopChecker, lookupTracker, module, reflectionTypes,
+            moduleClassResolver, packagePartProvider, supertypeLoopChecker, lookupTracker, module, reflectionTypes,
             annotationTypeQualifierResolver, signatureEnhancement, javaClassesTracker
     )
 }
