@@ -95,7 +95,7 @@ public final class Translation {
         CompileTimeConstant<?> compileTimeValue = ConstantExpressionEvaluator.getConstant(expression, context.bindingContext());
         if (compileTimeValue != null && !compileTimeValue.getUsesNonConstValAsConstant()) {
             KotlinType type = context.bindingContext().getType(expression);
-            if (type != null) {
+            if (type != null && (KotlinBuiltIns.isLong(type) || KotlinBuiltIns.isInt(type))) {
                 JsExpression constantResult = translateConstant(compileTimeValue, expression, context);
                 if (constantResult != null) {
                     constantResult.setSource(expression);
@@ -111,7 +111,9 @@ public final class Translation {
                         return descriptor == null ? constantResult : context.declareConstantValue(descriptor, constantResult);
                     }
 
-                    return constantResult;
+                    if (KotlinBuiltIns.isInt(type)) {
+                        return constantResult;
+                    }
                 }
             }
         }
