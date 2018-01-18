@@ -71,10 +71,14 @@ class MultiModuleJavaAnalysisCustomTest : KtUsefulTestCase() {
                 "test",
                 projectContext, modules, { JvmAnalyzerFacade },
                 { module -> ModuleContent(module.kotlinFiles, module.javaFilesScope) },
-                JvmPlatformParameters {
-                    javaClass ->
-                    val moduleName = javaClass.name.asString().toLowerCase().first().toString()
-                    modules.first { it._name == moduleName }
+                { _ ->
+                    JvmPlatformParameters(
+                        packagePartProviderFactory = { _, _ -> PackagePartProvider.Empty },
+                        moduleByJavaClass = { javaClass ->
+                            val moduleName = javaClass.name.asString().toLowerCase().first().toString()
+                            modules.first { it._name == moduleName }
+                        }
+                    )
                 },
                 builtIns = builtIns,
                 modulePlatforms = { MultiTargetPlatform.Specific("JVM") }

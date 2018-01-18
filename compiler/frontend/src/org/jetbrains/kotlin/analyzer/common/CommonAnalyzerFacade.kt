@@ -45,6 +45,10 @@ import org.jetbrains.kotlin.resolve.lazy.declarations.DeclarationProviderFactory
 import org.jetbrains.kotlin.resolve.lazy.declarations.DeclarationProviderFactoryService
 import org.jetbrains.kotlin.serialization.deserialization.MetadataPackageFragmentProvider
 
+class CommonAnalysisParameters(
+    val packagePartProviderFactory: (ModuleInfo, ModuleContent) -> PackagePartProvider
+) : PlatformAnalysisParameters
+
 /**
  * A facade that is used to analyze common (platform-independent) modules in multi-platform projects.
  * See [TargetPlatform.Common]
@@ -80,12 +84,11 @@ object CommonAnalyzerFacade : AnalyzerFacade() {
             "sources for metadata serializer",
             ProjectContext(project), listOf(moduleInfo), { CommonAnalyzerFacade },
             { ModuleContent(files, GlobalSearchScope.allScope(project)) },
-            object : PlatformAnalysisParameters {},
+            { _ -> CommonAnalysisParameters(packagePartProviderFactory) },
             languageSettingsProvider = object : LanguageSettingsProvider {
                 override fun getLanguageVersionSettings(moduleInfo: ModuleInfo, project: Project) = multiplatformLanguageSettings
                 override fun getTargetPlatform(moduleInfo: ModuleInfo) = TargetPlatformVersion.NoVersion
             },
-            packagePartProviderFactory = packagePartProviderFactory,
             modulePlatforms = { MultiTargetPlatform.Common }
         )
 
@@ -105,8 +108,7 @@ object CommonAnalyzerFacade : AnalyzerFacade() {
         platformParameters: PlatformAnalysisParameters,
         targetEnvironment: TargetEnvironment,
         resolverForProject: ResolverForProject<M>,
-        languageSettingsProvider: LanguageSettingsProvider,
-        packagePartProvider: PackagePartProvider
+        languageSettingsProvider: LanguageSettingsProvider
     ): ResolverForModule {
         val (syntheticFiles, moduleContentScope) = moduleContent
         val project = moduleContext.project
@@ -116,6 +118,7 @@ object CommonAnalyzerFacade : AnalyzerFacade() {
             moduleInfo
         )
 
+        val packagePartProvider = (platformParameters as CommonAnalysisParameters).packagePartProviderFactory(moduleInfo, moduleContent)
         val trace = CodeAnalyzerInitializer.getInstance(project).createTrace()
         val container = createContainerToResolveCommonCode(
             moduleContext, trace, declarationProviderFactory, moduleContentScope, targetEnvironment, packagePartProvider,

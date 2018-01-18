@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.analyzer.ModuleInfo
 import org.jetbrains.kotlin.analyzer.ResolverForProjectImpl
 import org.jetbrains.kotlin.container.get
 import org.jetbrains.kotlin.context.ProjectContext
+import org.jetbrains.kotlin.descriptors.PackagePartProvider
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.MultiTargetPlatform
@@ -37,11 +38,16 @@ fun createResolveSessionForFiles(
     val projectContext = ProjectContext(project)
     val testModule = TestModule(addBuiltIns)
     val resolverForProject = ResolverForProjectImpl(
-            "test",
-            projectContext, listOf(testModule), { JvmAnalyzerFacade },
-            { ModuleContent(syntheticFiles, GlobalSearchScope.allScope(project)) },
-            JvmPlatformParameters { testModule },
-            modulePlatforms = { MultiTargetPlatform.Specific("JVM") }
+        "test",
+        projectContext, listOf(testModule), { JvmAnalyzerFacade },
+        { ModuleContent(syntheticFiles, GlobalSearchScope.allScope(project)) },
+        { _ ->
+            JvmPlatformParameters(
+                packagePartProviderFactory = { _, _ -> PackagePartProvider.Empty },
+                moduleByJavaClass = { testModule }
+            )
+        },
+        modulePlatforms = { MultiTargetPlatform.Specific("JVM") }
     )
     return resolverForProject.resolverForModule(testModule).componentProvider.get<ResolveSession>()
 }

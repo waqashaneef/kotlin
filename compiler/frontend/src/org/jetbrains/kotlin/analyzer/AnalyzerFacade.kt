@@ -33,7 +33,6 @@ import org.jetbrains.kotlin.context.withModule
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.PackageFragmentDescriptor
 import org.jetbrains.kotlin.descriptors.PackageFragmentProvider
-import org.jetbrains.kotlin.descriptors.PackagePartProvider
 import org.jetbrains.kotlin.descriptors.impl.ModuleDependencies
 import org.jetbrains.kotlin.descriptors.impl.ModuleDescriptorImpl
 import org.jetbrains.kotlin.name.FqName
@@ -84,11 +83,10 @@ class ResolverForProjectImpl<M : ModuleInfo>(
     modules: Collection<M>,
     private val analyzerFacade: (M) -> AnalyzerFacade,
     private val modulesContent: (M) -> ModuleContent,
-    private val platformParameters: PlatformAnalysisParameters,
+    private val platformParameters: (TargetPlatform) -> PlatformAnalysisParameters,
     private val targetEnvironment: TargetEnvironment = CompilerEnvironment,
     private val builtIns: KotlinBuiltIns = DefaultBuiltIns.Instance,
     private val delegateResolver: ResolverForProject<M> = EmptyResolverForProject(),
-    private val packagePartProviderFactory: (M, ModuleContent) -> PackagePartProvider = { _, _ -> PackagePartProvider.Empty },
     private val firstDependency: M? = null,
     private val modulePlatforms: (M) -> MultiTargetPlatform?,
     private val packageOracleFactory: PackageOracleFactory = PackageOracleFactory.OptimisticFactory,
@@ -160,11 +158,10 @@ class ResolverForProjectImpl<M : ModuleInfo>(
             resolverByModuleDescriptor.getOrPut(descriptor) {
                 ResolverForModuleComputationTracker.getInstance(projectContext.project)?.onResolverComputed(module)
 
-                analyzerFacade(module).createResolverForModule(
+                val facade = analyzerFacade(module)
+                facade.createResolverForModule(
                     module, descriptor as ModuleDescriptorImpl, projectContext.withModule(descriptor), modulesContent(module),
-                    platformParameters, targetEnvironment, this@ResolverForProjectImpl,
-                    languageSettingsProvider,
-                    packagePartProviderFactory(module, modulesContent(module))
+                    platformParameters(facade.targetPlatform), targetEnvironment, this@ResolverForProjectImpl, languageSettingsProvider
                 )
             }
         }
@@ -230,7 +227,9 @@ data class ModuleContent(
     val moduleContentScope: GlobalSearchScope
 )
 
-interface PlatformAnalysisParameters
+interface PlatformAnalysisParameters {
+    object Empty : PlatformAnalysisParameters
+}
 
 interface ModuleInfo {
     val isLibrary: Boolean
@@ -275,8 +274,7 @@ abstract class AnalyzerFacade {
         platformParameters: PlatformAnalysisParameters,
         targetEnvironment: TargetEnvironment,
         resolverForProject: ResolverForProject<M>,
-        languageSettingsProvider: LanguageSettingsProvider,
-        packagePartProvider: PackagePartProvider
+        languageSettingsProvider: LanguageSettingsProvider
     ): ResolverForModule
 
     abstract val targetPlatform: TargetPlatform
