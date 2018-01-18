@@ -35,8 +35,8 @@ import org.jetbrains.kotlin.js.translate.intrinsic.functions.basic.FunctionIntri
 import org.jetbrains.kotlin.js.translate.reference.ReferenceTranslator
 import org.jetbrains.kotlin.js.translate.utils.TranslationUtils.simpleReturnFunction
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DescriptorUtils
-import org.jetbrains.kotlin.resolve.bindingContextUtil.getDataFlowInfoBefore
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.calls.smartcasts.DataFlowValueFactory
 import org.jetbrains.kotlin.resolve.descriptorUtil.hasOrInheritsParametersWithDefaultValue
@@ -275,7 +275,7 @@ fun TranslationContext.getRefinedType(expression: KtExpression): KotlinType? {
     val isPrimitiveFn = KotlinBuiltIns::isPrimitiveTypeOrNullablePrimitiveType
 
     val languageVersionSettings = config.configuration.languageVersionSettings
-    return bindingContext.getDataFlowInfoBefore(expression).getStableTypes(dataFlow, languageVersionSettings).find(isPrimitiveFn) ?: // Smart-casts
+    return bindingContext[BindingContext.EXPRESSION_TYPE_INFO, expression]?.dataFlowInfo?.getStableTypes(dataFlow, languageVersionSettings)?.find(isPrimitiveFn) ?: // Smart-casts
            TypeUtils.getAllSupertypes(ktType).find(isPrimitiveFn) ?: // Generic super-types
            ktType // Default
 }
