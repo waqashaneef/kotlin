@@ -43,6 +43,7 @@ object InlineParameterChecker : SimpleDeclarationChecker {
                 }
 
                 if (inline && !parameter.hasModifier(KtTokens.NOINLINE_KEYWORD) &&
+                    !parameter.hasModifier(KtTokens.CROSSINLINE_KEYWORD) &&
                     parameterDescriptor?.type?.isSuspendFunctionType == true) {
                     diagnosticHolder.report(Errors.INLINE_SUSPEND_FUNCTION_TYPE_UNSUPPORTED.on(parameter))
                 }
