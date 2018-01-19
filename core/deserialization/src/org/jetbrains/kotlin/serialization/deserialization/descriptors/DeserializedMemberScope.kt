@@ -44,19 +44,15 @@ abstract class DeserializedMemberScope protected constructor(
         classNames: () -> Collection<Name>
 ) : MemberScopeImpl() {
 
-    private val functionProtosBytes by c.storageManager.createLazyValue {
-        functionList.groupByName { it.name }.packToByteArray()
-    }
+    private val functionProtosBytes = functionList.groupByName { it.name }.packToByteArray()
 
-    private val propertyProtosBytes by c.storageManager.createLazyValue {
-        propertyList.groupByName { it.name }.packToByteArray()
-    }
-    private val typeAliasBytes by c.storageManager.createLazyValue {
+    private val propertyProtosBytes = propertyList.groupByName { it.name }.packToByteArray()
+
+    private val typeAliasBytes =
         if (c.components.configuration.typeAliasesAllowed)
             typeAliasList.groupByName { it.name }.packToByteArray()
         else
             emptyMap()
-    }
 
     private fun Map<Name, Collection<AbstractMessageLite>>.packToByteArray(): Map<Name, ByteArray> =
         mapValues { entry ->
