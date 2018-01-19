@@ -14,7 +14,7 @@ dependencies {
     compileOnly(intellijCoreDep()) { includeJars("intellij-core") }
     compileOnly(intellijDep()) { includeJars("util", "guava-19.0", "openapi", "idea", "asm-all") }
     compileOnly(intellijPluginDep("android")) {
-        includeJars("android", "android-common", "sdklib", "sdk-common", "sdk-tools",
+        includeJars("android", "android-common", "common", "sdklib", "sdk-common", "sdk-tools",
                     "repository", "lombok-ast-0.2.3", "layoutlib-api", "kxml2-2.3.0")
     }
 }
