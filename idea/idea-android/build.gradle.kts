@@ -22,9 +22,9 @@ dependencies {
 
     compile(androidDxJar())
 
-    compileOnly(intellijDep()) { includeJars("openapi", "idea", "extensions", "util", "guava-21.0", "android-base-common", rootProject = rootProject) }
+    compileOnly(intellijDep()) { includeJars("openapi", "idea", "java-api", "java-impl", "platform-api", "platform-impl", "extensions", "util", "guava-21.0", "android-base-common", rootProject = rootProject) }
     compileOnly(intellijPluginDep("android")) {
-        includeJars("android", "android-common", "sdk-common", "sdklib", "sdk-tools", "layoutlib-api")
+        includeJars("android", "android-common", "android-base-common", "sdk-common", "sdklib", "sdk-tools", "layoutlib-api")
     }
 
     testCompile(projectDist(":kotlin-test:kotlin-test-jvm"))
