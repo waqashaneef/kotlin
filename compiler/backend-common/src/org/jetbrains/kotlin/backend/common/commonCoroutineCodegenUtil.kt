@@ -31,7 +31,8 @@ val INTERCEPTED_NAME = Name.identifier("intercepted")
 val COROUTINE_SUSPENDED_NAME = Name.identifier("COROUTINE_SUSPENDED")
 
 val COROUTINES_INTRINSICS_PACKAGE_FQ_NAME = DescriptorUtils.COROUTINES_PACKAGE_FQ_NAME.child(Name.identifier("intrinsics"))
-val COROUTINE_CONTEXT_FQ_NAME = COROUTINES_INTRINSICS_PACKAGE_FQ_NAME.child(Name.identifier("coroutineContext"))
+val COROUTINE_CONTEXT_1_2_20_FQ_NAME = COROUTINES_INTRINSICS_PACKAGE_FQ_NAME.child(Name.identifier("coroutineContext"))
+val COROUTINE_CONTEXT_FQ_NAME = DescriptorUtils.COROUTINES_PACKAGE_FQ_NAME.child(Name.identifier("coroutineContext"))
 
 val SUSPEND_COROUTINE_UNINTERCEPTED_OR_RETURN_NAME = Name.identifier("suspendCoroutineUninterceptedOrReturn")
 
@@ -59,8 +60,10 @@ fun FunctionDescriptor.getBuiltInSuspendCoroutineOrReturn() =
                 .getContributedFunctions(SUSPEND_COROUTINE_OR_RETURN_NAME, NoLookupLocation.FROM_BACKEND)
                 .singleOrNull()
 
-fun FunctionDescriptor.isBuiltInCoroutineContext() =
-        (this as? PropertyGetterDescriptor)?.correspondingProperty?.fqNameSafe == COROUTINE_CONTEXT_FQ_NAME
+fun FunctionDescriptor.isBuiltInCoroutineContext(): Boolean {
+    val fqNameSafe = (this as? PropertyGetterDescriptor)?.correspondingProperty?.fqNameSafe
+    return fqNameSafe == COROUTINE_CONTEXT_1_2_20_FQ_NAME || fqNameSafe == COROUTINE_CONTEXT_FQ_NAME
+}
 
 fun FunctionDescriptor.isBuiltInSuspendCoroutineUninterceptedOrReturn(): Boolean {
     if (name != SUSPEND_COROUTINE_UNINTERCEPTED_OR_RETURN_NAME) return false

@@ -93,6 +93,21 @@ public inline suspend fun <T> suspendCoroutine(crossinline block: (Continuation<
             safe.getResult()
         }
 
+/**
+ * Continuation context of current coroutine.
+ *
+ * This allows the user code to not pass an extra [CoroutineContext] parameter in basic coroutine builders
+ * like [launch](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.experimental/launch.html)
+ * and [async](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.experimental/async.html),
+ * but still provide easy access to coroutine context.
+ */
+@SinceKotlin("1.2")
+@Suppress("WRONG_MODIFIER_TARGET")
+public suspend inline val coroutineContext: CoroutineContext
+    get() {
+        throw NotImplementedError("Implemented as intrinsic")
+    }
+
 // INTERNAL DECLARATIONS
 
 @kotlin.internal.InlineOnly

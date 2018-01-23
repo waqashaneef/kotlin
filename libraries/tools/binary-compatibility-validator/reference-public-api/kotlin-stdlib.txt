@@ -1829,6 +1829,7 @@ public abstract interface class kotlin/coroutines/experimental/CoroutineContext$
 public final class kotlin/coroutines/experimental/CoroutinesKt {
 	public static final fun createCoroutine (Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/experimental/Continuation;)Lkotlin/coroutines/experimental/Continuation;
 	public static final fun createCoroutine (Lkotlin/jvm/functions/Function2;Ljava/lang/Object;Lkotlin/coroutines/experimental/Continuation;)Lkotlin/coroutines/experimental/Continuation;
+	public static final fun getCoroutineContext ()Lkotlin/coroutines/experimental/CoroutineContext;
 	public static final fun startCoroutine (Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/experimental/Continuation;)V
 	public static final fun startCoroutine (Lkotlin/jvm/functions/Function2;Ljava/lang/Object;Lkotlin/coroutines/experimental/Continuation;)V
 }

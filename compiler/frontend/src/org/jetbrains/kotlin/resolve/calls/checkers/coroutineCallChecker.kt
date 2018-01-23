@@ -45,13 +45,14 @@ import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 object CoroutineSuspendCallChecker : CallChecker {
     private val ALLOWED_SCOPE_KINDS = setOf(LexicalScopeKind.FUNCTION_INNER_SCOPE, LexicalScopeKind.FUNCTION_HEADER_FOR_DESTRUCTURING)
+    private val COROUTINE_CONTEXT_1_2_20_FQ_NAME = FqName("kotlin.coroutines.experimental.intrinsics.coroutineContext")
     private val COROUTINE_CONTEXT_FQ_NAME = FqName("kotlin.coroutines.experimental.intrinsics.coroutineContext")
 
     override fun check(resolvedCall: ResolvedCall<*>, reportOn: PsiElement, context: CallCheckerContext) {
         val descriptor = resolvedCall.candidateDescriptor
         when (descriptor) {
             is FunctionDescriptor -> if (!descriptor.isSuspend) return
-            is PropertyDescriptor -> if (descriptor.fqNameSafe != COROUTINE_CONTEXT_FQ_NAME) return
+            is PropertyDescriptor -> if (descriptor.fqNameSafe != COROUTINE_CONTEXT_1_2_20_FQ_NAME && descriptor.fqNameSafe != COROUTINE_CONTEXT_FQ_NAME) return
             else -> return
         }
 

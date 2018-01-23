@@ -72,7 +72,12 @@ public inline fun <T> Continuation<T>.intercepted(): Continuation<T> =
  */
 @SinceKotlin("1.2")
 @Suppress("WRONG_MODIFIER_TARGET")
-public inline suspend val coroutineContext: CoroutineContext
+@Deprecated(
+    "Use kotlin.coroutines.experimental.coroutineContext instead",
+    ReplaceWith("kotlin.coroutines.experimental.coroutineContext"),
+    DeprecationLevel.WARNING
+)
+public suspend inline val coroutineContext: CoroutineContext
     get() {
         throw NotImplementedError("Implemented as intrinsic")
     }
