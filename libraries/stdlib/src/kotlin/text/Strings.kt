@@ -800,37 +800,6 @@ public fun CharSequence.commonSuffixWith(other: CharSequence, ignoreCase: Boolea
 
 // indexOfAny()
 
-private fun CharSequence.findAnyOf(chars: CharArray, startIndex: Int, ignoreCase: Boolean, last: Boolean): Int {
-    if (!ignoreCase && chars.size == 1 && this is String) {
-        val char = chars.single()
-        val index = if (!last) nativeIndexOf(char, startIndex) else nativeLastIndexOf(char, startIndex)
-        return if (index < 0) -1 else index
-    }
-
-    // Split it to two loops to avoid implicit IntRange allocation
-    when (last) {
-        true -> {
-            for (index in startIndex.coerceAtMost(lastIndex) downTo 0) {
-                val charAtIndex = get(index)
-                val matchingCharIndex = chars.indexOfFirst { it.equals(charAtIndex, ignoreCase) }
-                if (matchingCharIndex >= 0)
-                    return index
-            }
-        }
-
-        false -> {
-            for (index in startIndex.coerceAtLeast(0)..lastIndex) {
-                val charAtIndex = get(index)
-                val matchingCharIndex = chars.indexOfFirst { it.equals(charAtIndex, ignoreCase) }
-                if (matchingCharIndex >= 0)
-                    return index
-            }
-        }
-    }
-
-    return -1
-}
-
 /**
  * Finds the index of the first occurrence of any of the specified [chars] in this char sequence,
  * starting from the specified [startIndex] and optionally ignoring the case.
@@ -839,8 +808,20 @@ private fun CharSequence.findAnyOf(chars: CharArray, startIndex: Int, ignoreCase
  * @returns An index of the first occurrence of matched character from [chars] or -1 if none of [chars] are found.
  *
  */
-public fun CharSequence.indexOfAny(chars: CharArray, startIndex: Int = 0, ignoreCase: Boolean = false): Int =
-    findAnyOf(chars, startIndex, ignoreCase, last = false)
+public fun CharSequence.indexOfAny(chars: CharArray, startIndex: Int = 0, ignoreCase: Boolean = false): Int {
+    if (!ignoreCase && chars.size == 1 && this is String) {
+        val char = chars.single()
+        return nativeIndexOf(char, startIndex)
+    }
+
+    for (index in startIndex.coerceAtLeast(0)..lastIndex) {
+        val charAtIndex = get(index)
+        val matchingCharIndex = chars.indexOfFirst { it.equals(charAtIndex, ignoreCase) }
+        if (matchingCharIndex >= 0)
+            return index
+    }
+    return -1
+}
 
 /**
  * Finds the index of the last occurrence of any of the specified [chars] in this char sequence,
@@ -851,8 +832,22 @@ public fun CharSequence.indexOfAny(chars: CharArray, startIndex: Int = 0, ignore
  * @returns An index of the last occurrence of matched character from [chars] or -1 if none of [chars] are found.
  *
  */
-public fun CharSequence.lastIndexOfAny(chars: CharArray, startIndex: Int = lastIndex, ignoreCase: Boolean = false): Int =
-    findAnyOf(chars, startIndex, ignoreCase, last = true)
+public fun CharSequence.lastIndexOfAny(chars: CharArray, startIndex: Int = lastIndex, ignoreCase: Boolean = false): Int {
+    if (!ignoreCase && chars.size == 1 && this is String) {
+        val char = chars.single()
+        return nativeLastIndexOf(char, startIndex)
+    }
+
+
+    for (index in startIndex.coerceAtMost(lastIndex) downTo 0) {
+        val charAtIndex = get(index)
+        val matchingCharIndex = chars.indexOfFirst { it.equals(charAtIndex, ignoreCase) }
+        if (matchingCharIndex >= 0)
+            return index
+    }
+
+    return -1
+}
 
 
 private fun CharSequence.indexOf(other: CharSequence, startIndex: Int, endIndex: Int, ignoreCase: Boolean, last: Boolean = false): Int {
@@ -1123,7 +1118,7 @@ private fun CharSequence.rangesDelimitedBy(delimiters: CharArray, startIndex: In
     require(limit >= 0, { "Limit must be non-negative, but was $limit." })
 
     return DelimitedRangesSequence(this, startIndex, limit, { startIndex ->
-        findAnyOf(delimiters, startIndex, ignoreCase = ignoreCase, last = false).let { if (it == -1) null else it to 1 } })
+        indexOfAny(delimiters, startIndex, ignoreCase = ignoreCase).let { if (it < 0) null else it to 1 } })
 }
 
 
